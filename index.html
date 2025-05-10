@@ -132,9 +132,12 @@
     // Функция для нахождения последней даты (игнорируем время)
     function getLastDate(data) {
       const dates = data.map(record => {
-        const dateParts = record.date.split(' ')[0];
-        if (dateParts) {
-          return new Date(dateParts);
+        // Проверка на наличие даты и её корректность
+        if (record.date) {
+          const dateParts = record.date.split(' ')[0]; // Отделяем только дату (без времени)
+          if (dateParts) {
+            return new Date(dateParts);
+          }
         }
         return new Date(0); // Возвращаем 0, если дата некорректна
       });
@@ -210,20 +213,12 @@
     async function updateStats() {
       const data = await fetchData();
 
-      // Проверка, если данные для второго листа пустые или неправильные
-      console.log('Data for FI Station KOVALCHYK Y.:', data['FI Station KOVALCHYK Y.']);
-      console.log('Data for FI Station 2 ULANOVYCH.R:', data['FI Station 2 ULANOVYCH.R']);
-
       // Для каждого листа получаем последнюю дату, фильтруем данные и отображаем статистику
       Object.keys(data).forEach(sheetName => {
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
         const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
-        const filteredData = sheetData.filter(record => record.date.split(' ')[0] === lastDateString);
-
-        // Отладка для проверки фильтрации
-        console.log(`Last date for ${sheetName}: ${lastDateString}`);
-        console.log(`Filtered data for ${sheetName}:`, filteredData);
+        const filteredData = sheetData.filter(record => record.date && record.date.split(' ')[0] === lastDateString);
 
         const result = calculateStats(filteredData, lastDateString);
         
