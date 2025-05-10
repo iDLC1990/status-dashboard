@@ -131,8 +131,16 @@
 
     // Функция для нахождения последней даты (игнорируем время)
     function getLastDate(data) {
-      const dates = data.map(record => record.date.split(' ')[0]);
-      return new Date(Math.max(...dates.map(date => new Date(date))));
+      const dates = data.map(record => {
+        const dateParts = record.date.split(' ')[0];
+        if (dateParts) {
+          return new Date(dateParts);
+        }
+        return new Date(0); // Возвращаем 0, если дата некорректна
+      });
+      
+      const lastDate = new Date(Math.max(...dates));
+      return lastDate;
     }
 
     // Функция для подсчёта статистики
