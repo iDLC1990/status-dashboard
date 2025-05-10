@@ -8,7 +8,6 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 30px;
     }
     table, th, td {
       border: 1px solid black;
@@ -17,37 +16,13 @@
       padding: 8px;
       text-align: center;
     }
-    h2 {
-      margin-bottom: 10px;
-    }
   </style>
 </head>
 <body>
 
-  <h1>Статистика по статусам на текущий день</h1>
+  <h1>Статистика по статусам на последнюю дату</h1>
 
-  <!-- Таблица для первого листа -->
-  <h2>FI Station KOVALCHYK Y.</h2>
-  <table id="stats-table-kovalchyk">
-    <thead>
-      <tr>
-        <th>Имя</th>
-        <th>ndf</th>
-        <th>OK</th>
-        <th>WAITING</th>
-        <th>SCRAP TTL</th>
-        <th>SCRAP PNLA</th>
-        <th>Suma Całkowita</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Здесь будут динамически добавляться строки -->
-    </tbody>
-  </table>
-
-  <!-- Таблица для второго листа -->
-  <h2>FI Station 2 ULANOVYCH.R</h2>
-  <table id="stats-table-ulianovych">
+  <table id="stats-table">
     <thead>
       <tr>
         <th>Имя</th>
@@ -65,30 +40,56 @@
   </table>
 
   <script>
-    const API_KEY = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
-    const SPREADSHEET_ID = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
-
-    const sheets = ['FI Station KOVALCHYK Y.', 'FI Station 2 ULANOVYCH.R'];
+    // Ваш API-ключ для доступа к Google Sheets
+    const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
+    const sheetId = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
     
-    // Функция для получения данных с Google Таблицы
-    async function fetchData(sheetName) {
-      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}?key=${API_KEY}`);
+    // URL для получения данных из Google Sheets
+    const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
+    
+    // Функция для получения данных из таблицы
+    async function getData(sheetName) {
+      const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
       const data = await response.json();
-      return data.values.slice(1); // Обрезаем заголовок
+      return data.values;
     }
 
-    // Функция для подсчета статистики
-    function calculateStats(data) {
+    // Получение данных для обоих листов
+    async function fetchData() {
+      const sheet1Data = await getData('FI Station KOVALCHYK Y.');
+      const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
+      
+      // Объединяем данные с обоих листов
+      const allData = [...sheet1Data, ...sheet2Data];
+
+      // Преобразуем данные в объекты с более удобной структурой
+      const formattedData = allData.slice(1).map(row => ({
+        name: row[5], // Фамилия в столбце F
+        status: row[4], // Статус в столбце E
+        date: row[0] // Дата в столбце A
+      }));
+
+      return formattedData;
+    }
+
+    // Функция для нахождения последней даты
+    function getLastDate(data) {
+      const dates = data.map(record => record.date);
+      return new Date(Math.max(...dates.map(date => new Date(date))));
+    }
+
+    // Функция для подсчёта статистики
+    function calculateStats(data, lastDate) {
       const stats = {};
 
-      // Перебираем все строки и считаем статусы
+      // Перебираем все данные и считаем статусы для каждого человека за последнюю дату
       data.forEach(record => {
-        const [date, , , , status, name] = record;
+        const { name, status, date } = record;
 
-        // Если дата не сегодня, пропускаем запись
-        const today = new Date().toISOString().split('T')[0];
-        if (date !== today) return;
+        // Если дата не совпадает с последней датой, пропускаем
+        if (date !== lastDate) return;
 
+        // Если такого человека ещё нет в объекте, создаём запись
         if (!stats[name]) {
           stats[name] = {
             ndf: 0,
@@ -100,7 +101,7 @@
           };
         }
 
-        // Увеличиваем счетчики для соответствующих статусов
+        // Увеличиваем счетчик для соответствующего статуса
         if (status === 'ndf') stats[name].ndf++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
@@ -114,9 +115,11 @@
       return stats;
     }
 
-    // Функция для отображения данных в таблице
-    function displayStats(stats, tableId) {
-      const tableBody = document.querySelector(`#${tableId} tbody`);
+    // Функция для отображения статистики на странице
+    function displayStats(stats) {
+      const statsTableBody = document.querySelector('#stats-table tbody');
+      
+      // Динамически добавляем строки в таблицу
       Object.keys(stats).forEach(name => {
         const row = document.createElement('tr');
         const data = stats[name];
@@ -131,21 +134,23 @@
           <td>${data.total}</td>
         `;
 
-        tableBody.appendChild(row);
+        statsTableBody.appendChild(row);
       });
     }
 
-    // Загрузка и обработка данных для каждого листа
-    async function loadAndDisplayData() {
-      for (const sheet of sheets) {
-        const data = await fetchData(sheet);
-        const stats = calculateStats(data);
-        const tableId = sheet === 'FI Station KOVALCHYK Y.' ? 'stats-table-kovalchyk' : 'stats-table-ulianovych';
-        displayStats(stats, tableId);
-      }
+    // Основная функция для запуска всего процесса
+    async function init() {
+      const data = await fetchData();
+      const lastDate = getLastDate(data);
+      const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
+      const filteredData = data.filter(record => record.date === lastDateString);
+
+      const result = calculateStats(filteredData, lastDateString);
+      displayStats(result);
     }
 
-    loadAndDisplayData();
+    // Запуск приложения
+    init();
   </script>
 
 </body>
