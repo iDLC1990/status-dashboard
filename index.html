@@ -132,8 +132,8 @@
     // Функция для нахождения последней даты (игнорируем время)
     function getLastDate(data) {
       const dates = data.map(record => {
-        // Проверка на наличие даты, если она отсутствует, возвращаем минимальную дату
-        const dateParts = record.date ? record.date.split(' ')[0] : '';
+        // Проверяем, если дата существует, разделяем её, если нет — возвращаем минимальную дату
+        const dateParts = (record.date && record.date.split(' ')[0]) || '';
         if (dateParts) {
           return new Date(dateParts);
         }
@@ -151,9 +151,6 @@
       // Перебираем все данные и считаем статусы для каждого человека за последнюю дату
       data.forEach(record => {
         const { name, status, date } = record;
-        
-        // Проверка статуса с удалением лишних пробелов и приведение к нижнему регистру
-        const normalizedStatus = (status || '').trim().toLowerCase();
         
         // Сравниваем только дату (игнорируем время)
         const recordDate = date.split(' ')[0];
@@ -174,11 +171,11 @@
         }
 
         // Увеличиваем счетчик для соответствующего статуса
-        if (normalizedStatus === 'ndf') stats[name].ndf++;
-        if (normalizedStatus === 'ok') stats[name].OK++;
-        if (normalizedStatus === 'waiting') stats[name].WAITING++;
-        if (normalizedStatus === 'scrap ttl') stats[name]['SCRAP TTL']++;
-        if (normalizedStatus === 'scrap pnla') stats[name]['SCRAP PNLA']++;
+        if (status === 'ndf') stats[name].ndf++;
+        if (status === 'OK') stats[name].OK++;
+        if (status === 'WAITING') stats[name].WAITING++;
+        if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
+        if (status === 'SCRAP PNLA') stats[name]['SCRAP PNLA']++;
 
         // Увеличиваем общий счётчик
         stats[name].total++;
@@ -214,20 +211,12 @@
     async function updateStats() {
       const data = await fetchData();
 
-      // Проверка, если данные для второго листа пустые или неправильные
-      console.log('Data for FI Station KOVALCHYK Y.:', data['FI Station KOVALCHYK Y.']);
-      console.log('Data for FI Station 2 ULANOVYCH.R:', data['FI Station 2 ULANOVYCH.R']);
-
       // Для каждого листа получаем последнюю дату, фильтруем данные и отображаем статистику
       Object.keys(data).forEach(sheetName => {
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
         const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
         const filteredData = sheetData.filter(record => record.date.split(' ')[0] === lastDateString);
-
-        // Отладка для проверки фильтрации
-        console.log(`Last date for ${sheetName}: ${lastDateString}`);
-        console.log(`Filtered data for ${sheetName}:`, filteredData);
 
         const result = calculateStats(filteredData, lastDateString);
         
@@ -240,12 +229,12 @@
       });
     }
 
-// Запускаем обновление статистики каждый 3 минуты
-setInterval(updateStats, 3 * 60 * 1000);
-
-// Первоначальный запуск
-updateStats();
-</script>
+    // Запускаем обновление статистики каждый 3 минуты
+    setInterval(updateStats, 3 * 60 * 1000);
+    
+    // Первоначальный запуск
+    updateStats();
+  </script>
 
 </body>
-</html> 
+</html>
