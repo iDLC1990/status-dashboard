@@ -132,8 +132,7 @@
     // Функция для нахождения последней даты (игнорируем время)
     function getLastDate(data) {
       const dates = data.map(record => {
-        // Проверяем, если дата существует, разделяем её, если нет — возвращаем минимальную дату
-        const dateParts = (record.date && record.date.split(' ')[0]) || '';
+        const dateParts = record.date.split(' ')[0];
         if (dateParts) {
           return new Date(dateParts);
         }
@@ -153,7 +152,7 @@
         const { name, status, date } = record;
         
         // Сравниваем только дату (игнорируем время)
-        const recordDate = (date && date.split(' ')[0]) || '';
+        const recordDate = date.split(' ')[0];
 
         // Если дата не совпадает с последней датой, пропускаем
         if (recordDate !== lastDate) return;
@@ -161,7 +160,7 @@
         // Если такого человека ещё нет в объекте, создаём запись
         if (!stats[name]) {
           stats[name] = {
-            NDF: 0,
+            ndf: 0,
             OK: 0,
             WAITING: 0,
             'SCRAP TTL': 0,
@@ -171,7 +170,7 @@
         }
 
         // Увеличиваем счетчик для соответствующего статуса
-        if (status === 'NDF') stats[name].NDF++;
+        if (status === 'ndf') stats[name].ndf++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
         if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
@@ -184,8 +183,17 @@
       return stats;
     }
 
+    // Функция для очистки таблицы перед обновлением
+    function clearTable(tableId) {
+      const statsTableBody = document.querySelector(`#${tableId} tbody`);
+      statsTableBody.innerHTML = ''; // Очищаем все строки в таблице
+    }
+
     // Функция для отображения статистики на странице
     function displayStats(stats, tableId) {
+      // Очищаем таблицу перед добавлением новых данных
+      clearTable(tableId);
+
       const statsTableBody = document.querySelector(`#${tableId} tbody`);
       
       // Динамически добавляем строки в таблицу
@@ -195,7 +203,7 @@
 
         row.innerHTML = `
           <td>${name}</td>
-          <td>${data.NDF}</td>
+          <td>${data.ndf}</td>
           <td>${data.OK}</td>
           <td>${data.WAITING}</td>
           <td>${data['SCRAP TTL']}</td>
@@ -216,10 +224,7 @@
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
         const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
-        const filteredData = sheetData.filter(record => {
-          const recordDate = (record.date && record.date.split(' ')[0]) || '';
-          return recordDate === lastDateString;
-        });
+        const filteredData = sheetData.filter(record => record.date.split(' ')[0] === lastDateString);
 
         const result = calculateStats(filteredData, lastDateString);
         
