@@ -103,14 +103,14 @@
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
       const allData = {
         'FI Station KOVALCHYK Y.': sheet1Data.slice(1).map(row => ({
-          name: row[5], // Фамилия в столбце F
-          status: row[4], // Статус в столбце E
-          date: row[0] // Дата в столбце A
+          name: row[5], 
+          status: row[4], 
+          date: row[0] 
         })),
         'FI Station 2 ULANOVYCH.R': sheet2Data.slice(1).map(row => ({
-          name: row[5], // Фамилия в столбце F
-          status: row[4], // Статус в столбце E
-          date: row[0] // Дата в столбце A
+          name: row[5], 
+          status: row[4], 
+          date: row[0] 
         }))
       };
       return allData;
