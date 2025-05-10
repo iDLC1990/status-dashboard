@@ -1,71 +1,60 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LCDR LIVE DATA</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подсчёт статусов</title>
   <style>
     body {
-      background-color: #000;
-      color: #000;
+      background-color: black;
+      color: white;
       font-family: Arial, sans-serif;
-      padding: 20px;
-      margin: 0;
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-
-    .header .date,
-    .header .title,
-    h2 {
-      color: #a3d7ff; /* Нежно-голубой */
+    h1, h2 {
+      text-align: center;
+      color: #ADD8E6; /* Нежно-голубой */
     }
 
     table {
-      width: 90%;
-      margin: 0 auto 40px;
-      border-collapse: separate;
-      border-spacing: 0;
-      background-color: #ccc;
+      width: 80%;
+      margin: 20px auto;
+      border-collapse: collapse;
       border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+      background-color: #333;
     }
 
-    th {
-      background-color: #bbb;
-      font-weight: bold;
-      font-size: 1.1em;
-      padding: 10px;
-    }
-
-    td {
-      padding: 8px;
-      color: #000;
-      background-color: #eee;
+    table, th, td {
+      border: 1px solid #555;
     }
 
     th, td {
+      padding: 10px;
       text-align: center;
+      color: white;
     }
 
-    h2 {
+    th {
+      font-weight: bold;
+      font-size: 1.2em;
+      background-color: #444;
+    }
+
+    td {
+      font-size: 1em;
+      background-color: #666;
+    }
+
+    .date-header {
       text-align: center;
-      margin-top: 40px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <div class="date" id="latest-date">DATE: </div>
-    <div class="title">LCDR LIVE DATA 2025</div>
-  </div>
+  <h1>LCDR LIVE DATA 2025</h1>
+  <p class="date-header">DATE: <span id="current-date"></span></p>
 
   <h2>FI Station KOVALCHYK Y.</h2>
   <table id="stats-table-kov">
@@ -80,7 +69,9 @@
         <th>Suma Całkowita</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Здесь будут динамически добавляться строки -->
+    </tbody>
   </table>
 
   <h2>FI Station 2 ULANOVYCH.R</h2>
@@ -96,12 +87,15 @@
         <th>Suma Całkowita</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Здесь будут динамически добавляться строки -->
+    </tbody>
   </table>
 
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
+    
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
     async function getData(sheetName) {
@@ -113,47 +107,47 @@
     async function fetchData() {
       const sheet1Data = await getData('FI Station KOVALCHYK Y.');
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
-
-      return {
+      
+      const allData = {
         'FI Station KOVALCHYK Y.': sheet1Data.slice(1).map(row => ({
-          name: row[5],
-          status: row[4],
-          date: row[0]
+          name: row[5], // Фамилия в столбце F
+          status: row[4], // Статус в столбце E
+          date: row[0] // Дата в столбце A
         })),
         'FI Station 2 ULANOVYCH.R': sheet2Data.slice(1).map(row => ({
-          name: row[5],
-          status: row[4],
-          date: row[0]
+          name: row[5], // Фамилия в столбце F
+          status: row[4], // Статус в столбце E
+          date: row[0] // Дата в столбце A
         }))
       };
+
+      return allData;
     }
 
     function getLastDate(data) {
-      const dates = data.map(record => new Date(record.date));
-      return new Date(Math.max(...dates));
+      const dates = data.map(record => record.date);
+      return new Date(Math.max(...dates.map(date => new Date(date)))).toISOString().split('T')[0];
     }
 
     function calculateStats(data, lastDate) {
       const stats = {};
-      const lastDateStr = lastDate.toISOString().split('T')[0];
 
       data.forEach(record => {
-        if (record.date !== lastDateStr) return;
-        const name = record.name;
-        const status = record.status;
+        const { name, status, date } = record;
+        if (date !== lastDate) return;
 
         if (!stats[name]) {
           stats[name] = {
-            NDF: 0,
+            ndf: 0,
             OK: 0,
             WAITING: 0,
             'SCRAP TTL': 0,
             'SCRAP PNLA': 0,
-            total: 0
+            total: 0,
           };
         }
 
-        if (status === 'NDF') stats[name].NDF++;
+        if (status === 'ndf') stats[name].ndf++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
         if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
@@ -166,40 +160,45 @@
     }
 
     function displayStats(stats, tableId) {
-      const tbody = document.querySelector(`#${tableId} tbody`);
+      const statsTableBody = document.querySelector(`#${tableId} tbody`);
+      
       Object.keys(stats).forEach(name => {
-        const data = stats[name];
         const row = document.createElement('tr');
+        const data = stats[name];
+
         row.innerHTML = `
           <td>${name}</td>
-          <td>${data.NDF}</td>
+          <td>${data.ndf}</td>
           <td>${data.OK}</td>
           <td>${data.WAITING}</td>
           <td>${data['SCRAP TTL']}</td>
           <td>${data['SCRAP PNLA']}</td>
           <td>${data.total}</td>
         `;
-        tbody.appendChild(row);
+
+        statsTableBody.appendChild(row);
       });
     }
 
     async function init() {
       const data = await fetchData();
+      const currentDate = new Date().toISOString().split('T')[0];
+      document.getElementById("current-date").textContent = currentDate;
 
-      const allRecords = [...data['FI Station KOVALCHYK Y.'], ...data['FI Station 2 ULANOVYCH.R']];
-      const lastDate = getLastDate(allRecords);
-      const lastDateStr = lastDate.toISOString().split('T')[0];
-      document.getElementById('latest-date').textContent = `DATE: ${lastDateStr}`;
+      Object.keys(data).forEach(sheetName => {
+        const sheetData = data[sheetName];
+        const lastDate = getLastDate(sheetData);
+        const filteredData = sheetData.filter(record => record.date === lastDate);
 
-      Object.entries(data).forEach(([sheetName, sheetData]) => {
-        const filtered = sheetData.filter(r => r.date === lastDateStr);
-        const stats = calculateStats(filtered, lastDate);
-        const tableId = sheetName === 'FI Station KOVALCHYK Y.' ? 'stats-table-kov' : 'stats-table-ulan';
-        displayStats(stats, tableId);
+        const result = calculateStats(filteredData, lastDate);
+        
+        displayStats(result, sheetName === 'FI Station KOVALCHYK Y.' ? 'stats-table-kov' : 'stats-table-ulan');
       });
     }
 
     init();
+    setInterval(init, 180000); // Обновление каждые 3 минуты
   </script>
+
 </body>
 </html>
