@@ -153,7 +153,7 @@
         const { name, status, date } = record;
         
         // Сравниваем только дату (игнорируем время)
-        const recordDate = date.split(' ')[0];
+        const recordDate = (date && date.split(' ')[0]) || '';
 
         // Если дата не совпадает с последней датой, пропускаем
         if (recordDate !== lastDate) return;
@@ -216,7 +216,10 @@
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
         const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
-        const filteredData = sheetData.filter(record => record.date.split(' ')[0] === lastDateString);
+        const filteredData = sheetData.filter(record => {
+          const recordDate = (record.date && record.date.split(' ')[0]) || '';
+          return recordDate === lastDateString;
+        });
 
         const result = calculateStats(filteredData, lastDateString);
         
