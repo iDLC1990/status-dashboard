@@ -8,6 +8,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-bottom: 20px;
     }
     table, th, td {
       border: 1px solid black;
@@ -22,7 +23,26 @@
 
   <h1>Статистика по статусам на последнюю дату</h1>
 
-  <table id="stats-table">
+  <h2>FI Station KOVALCHYK Y.</h2>
+  <table id="stats-table-kov">
+    <thead>
+      <tr>
+        <th>Имя</th>
+        <th>ndf</th>
+        <th>OK</th>
+        <th>WAITING</th>
+        <th>SCRAP TTL</th>
+        <th>SCRAP PNLA</th>
+        <th>Suma Całkowita</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Здесь будут динамически добавляться строки -->
+    </tbody>
+  </table>
+
+  <h2>FI Station 2 ULANOVYCH.R</h2>
+  <table id="stats-table-ulan">
     <thead>
       <tr>
         <th>Имя</th>
@@ -60,16 +80,20 @@
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
       
       // Объединяем данные с обоих листов
-      const allData = [...sheet1Data, ...sheet2Data];
+      const allData = {
+        'FI Station KOVALCHYK Y.': sheet1Data.slice(1).map(row => ({
+          name: row[5], // Фамилия в столбце F
+          status: row[4], // Статус в столбце E
+          date: row[0] // Дата в столбце A
+        })),
+        'FI Station 2 ULANOVYCH.R': sheet2Data.slice(1).map(row => ({
+          name: row[5], // Фамилия в столбце F
+          status: row[4], // Статус в столбце E
+          date: row[0] // Дата в столбце A
+        }))
+      };
 
-      // Преобразуем данные в объекты с более удобной структурой
-      const formattedData = allData.slice(1).map(row => ({
-        name: row[5], // Фамилия в столбце F
-        status: row[4], // Статус в столбце E
-        date: row[0] // Дата в столбце A
-      }));
-
-      return formattedData;
+      return allData;
     }
 
     // Функция для нахождения последней даты
@@ -116,8 +140,8 @@
     }
 
     // Функция для отображения статистики на странице
-    function displayStats(stats) {
-      const statsTableBody = document.querySelector('#stats-table tbody');
+    function displayStats(stats, tableId) {
+      const statsTableBody = document.querySelector(`#${tableId} tbody`);
       
       // Динамически добавляем строки в таблицу
       Object.keys(stats).forEach(name => {
@@ -141,12 +165,19 @@
     // Основная функция для запуска всего процесса
     async function init() {
       const data = await fetchData();
-      const lastDate = getLastDate(data);
-      const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
-      const filteredData = data.filter(record => record.date === lastDateString);
 
-      const result = calculateStats(filteredData, lastDateString);
-      displayStats(result);
+      // Для каждого листа получаем последнюю дату, фильтруем данные и отображаем статистику
+      Object.keys(data).forEach(sheetName => {
+        const sheetData = data[sheetName];
+        const lastDate = getLastDate(sheetData);
+        const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
+        const filteredData = sheetData.filter(record => record.date === lastDateString);
+
+        const result = calculateStats(filteredData, lastDateString);
+        
+        // Отображаем статистику для каждого листа в отдельной таблице
+        displayStats(result, sheetName === 'FI Station KOVALCHYK Y.' ? 'stats-table-kov' : 'stats-table-ulan');
+      });
     }
 
     // Запуск приложения
