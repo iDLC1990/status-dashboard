@@ -161,7 +161,7 @@
         // Если такого человека ещё нет в объекте, создаём запись
         if (!stats[name]) {
           stats[name] = {
-            ndf: 0,
+            NDF: 0,
             OK: 0,
             WAITING: 0,
             'SCRAP TTL': 0,
@@ -171,7 +171,7 @@
         }
 
         // Увеличиваем счетчик для соответствующего статуса
-        if (status === 'ndf') stats[name].ndf++;
+        if (status === 'NDF') stats[name].NDF++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
         if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
@@ -195,7 +195,7 @@
 
         row.innerHTML = `
           <td>${name}</td>
-          <td>${data.ndf}</td>
+          <td>${data.NDF}</td>
           <td>${data.OK}</td>
           <td>${data.WAITING}</td>
           <td>${data['SCRAP TTL']}</td>
