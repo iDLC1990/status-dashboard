@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Статистика по статусам</title>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>FI Station KOVALCHYK Y.</h1>
+  <table id="table1">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>NDF</th>
+        <th>OK</th>
+        <th>WAITING</th>
+        <th>SCRAP TTL</th>
+        <th>SCRAP_PNLA</th>
+        <th>Suma Całkowita</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h1>FI Station 2 ULANOVYCH.R</h1>
+  <table id="table2">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>NDF</th>
+        <th>OK</th>
+        <th>WAITING</th>
+        <th>SCRAP TTL</th>
+        <th>SCRAP_PNLA</th>
+        <th>Suma Całkowita</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
+    const sheetId = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
+    const sheetNames = [
+      { id: 'table1', name: 'FI Station KOVALCHYK Y.' },
+      { id: 'table2', name: 'FI Station 2 ULANOVYCH.R' }
+    ];
+
+    const today = new Date().toISOString().split('T')[0];
+
+    sheetNames.forEach(sheet => {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/'${sheet.name}'?key=${apiKey}`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const rows = data.values;
+          if (!rows || rows.length === 0) return;
+
+          const header = rows[0];
+          const dateCol = header.indexOf("Дата");
+          const statusCol = header.indexOf("E");
+          const nameCol = header.indexOf("F");
+
+          const stats = {};
+
+          rows.slice(1).forEach(row => {
+            const date = row[0]?.split("T")[0];
+            const status = row[4]?.trim();
+            const name = row[5]?.trim();
+
+            if (!date || !status || !name || date !== today) return;
+
+            if (!stats[name]) {
+              stats[name] = {
+                NDF: 0,
+                OK: 0,
+                WAITING: 0,
+                "SCRAP TTL": 0,
+                SCRAP_PNLA: 0,
+                total: 0,
+              };
+            }
+
+            if (status === 'NDF') stats[name].NDF++;
+            else if (status === 'OK') stats[name].OK++;
+            else if (status === 'WAITING') stats[name].WAITING++;
+            else if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
+            else if (status === 'SCRAP_PNLA') stats[name].SCRAP_PNLA++;
+
+            stats[name].total++;
+          });
+
+          const tbody = document.querySelector(`#${sheet.id} tbody`);
+          Object.keys(stats).forEach(name => {
+            const d = stats[name];
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${name}</td>
+              <td>${d.NDF}</td>
+              <td>${d.OK}</td>
+              <td>${d.WAITING}</td>
+              <td>${d['SCRAP TTL']}</td>
+              <td>${d.SCRAP_PNLA}</td>
+              <td>${d.total}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        })
+        .catch(error => console.error('Ошибка при получении данных:', error));
+    });
+  </script>
+</body>
+</html>
