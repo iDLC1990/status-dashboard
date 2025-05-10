@@ -132,7 +132,7 @@
     // Функция для нахождения последней даты (игнорируем время)
     function getLastDate(data) {
       const dates = data.map(record => {
-        const dateParts = record.date ? record.date.split(' ')[0] : null;
+        const dateParts = record.date.split(' ')[0];
         if (dateParts) {
           return new Date(dateParts);
         }
@@ -152,7 +152,7 @@
         const { name, status, date } = record;
         
         // Сравниваем только дату (игнорируем время)
-        const recordDate = date ? date.split(' ')[0] : null;
+        const recordDate = date.split(' ')[0];
 
         // Если дата не совпадает с последней датой, пропускаем
         if (recordDate !== lastDate) return;
@@ -219,10 +219,7 @@
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
         const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
-        const filteredData = sheetData.filter(record => {
-          const recordDate = record.date ? record.date.split(' ')[0] : null;
-          return recordDate === lastDateString;
-        });
+        const filteredData = sheetData.filter(record => record.date.split(' ')[0] === lastDateString);
 
         // Отладка для проверки фильтрации
         console.log(`Last date for ${sheetName}: ${lastDateString}`);
@@ -240,4 +237,11 @@
     }
 
     // Запускаем обновление статистики каждый 3 минуты
-    setInterval(updateStats, 3 *
+    setInterval(updateStats, 3 * 60 * 1000);
+    
+    // Первоначальный запуск
+    updateStats();
+  </script>
+
+</body>
+</html>
