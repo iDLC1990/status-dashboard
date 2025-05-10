@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Статистика по статусам</title>
+  <title>Подсчёт статусов</title>
   <style>
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-bottom: 30px;
     }
     table, th, td {
       border: 1px solid black;
@@ -16,112 +17,136 @@
       padding: 8px;
       text-align: center;
     }
+    h2 {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
-  <h1>FI Station KOVALCHYK Y.</h1>
-  <table id="table1">
+
+  <h1>Статистика по статусам на текущий день</h1>
+
+  <!-- Таблица для первого листа -->
+  <h2>FI Station KOVALCHYK Y.</h2>
+  <table id="stats-table-kovalchyk">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>NDF</th>
+        <th>Имя</th>
+        <th>ndf</th>
         <th>OK</th>
         <th>WAITING</th>
         <th>SCRAP TTL</th>
-        <th>SCRAP_PNLA</th>
+        <th>SCRAP PNLA</th>
         <th>Suma Całkowita</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Здесь будут динамически добавляться строки -->
+    </tbody>
   </table>
 
-  <h1>FI Station 2 ULANOVYCH.R</h1>
-  <table id="table2">
+  <!-- Таблица для второго листа -->
+  <h2>FI Station 2 ULANOVYCH.R</h2>
+  <table id="stats-table-ulianovych">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>NDF</th>
+        <th>Имя</th>
+        <th>ndf</th>
         <th>OK</th>
         <th>WAITING</th>
         <th>SCRAP TTL</th>
-        <th>SCRAP_PNLA</th>
+        <th>SCRAP PNLA</th>
         <th>Suma Całkowita</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Здесь будут динамически добавляться строки -->
+    </tbody>
   </table>
 
   <script>
-    const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
-    const sheetId = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
-    const sheetNames = [
-      { id: 'table1', name: 'FI Station KOVALCHYK Y.' },
-      { id: 'table2', name: 'FI Station 2 ULANOVYCH.R' }
-    ];
+    const API_KEY = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
+    const SPREADSHEET_ID = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
 
-    const today = new Date().toISOString().split('T')[0];
+    const sheets = ['FI Station KOVALCHYK Y.', 'FI Station 2 ULANOVYCH.R'];
+    
+    // Функция для получения данных с Google Таблицы
+    async function fetchData(sheetName) {
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}?key=${API_KEY}`);
+      const data = await response.json();
+      return data.values.slice(1); // Обрезаем заголовок
+    }
 
-    sheetNames.forEach(sheet => {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/'${sheet.name}'?key=${apiKey}`;
+    // Функция для подсчета статистики
+    function calculateStats(data) {
+      const stats = {};
 
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          const rows = data.values;
-          if (!rows || rows.length === 0) return;
+      // Перебираем все строки и считаем статусы
+      data.forEach(record => {
+        const [date, , , , status, name] = record;
 
-          const header = rows[0];
-          const dateCol = header.indexOf("Дата");
-          const statusCol = header.indexOf("E");
-          const nameCol = header.indexOf("F");
+        // Если дата не сегодня, пропускаем запись
+        const today = new Date().toISOString().split('T')[0];
+        if (date !== today) return;
 
-          const stats = {};
+        if (!stats[name]) {
+          stats[name] = {
+            ndf: 0,
+            OK: 0,
+            WAITING: 0,
+            'SCRAP TTL': 0,
+            'SCRAP PNLA': 0,
+            total: 0,
+          };
+        }
 
-          rows.slice(1).forEach(row => {
-            const date = row[0]?.split("T")[0];
-            const status = row[4]?.trim();
-            const name = row[5]?.trim();
+        // Увеличиваем счетчики для соответствующих статусов
+        if (status === 'ndf') stats[name].ndf++;
+        if (status === 'OK') stats[name].OK++;
+        if (status === 'WAITING') stats[name].WAITING++;
+        if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
+        if (status === 'SCRAP PNLA') stats[name]['SCRAP PNLA']++;
 
-            if (!date || !status || !name || date !== today) return;
+        // Увеличиваем общий счётчик
+        stats[name].total++;
+      });
 
-            if (!stats[name]) {
-              stats[name] = {
-                NDF: 0,
-                OK: 0,
-                WAITING: 0,
-                "SCRAP TTL": 0,
-                SCRAP_PNLA: 0,
-                total: 0,
-              };
-            }
+      return stats;
+    }
 
-            if (status === 'NDF') stats[name].NDF++;
-            else if (status === 'OK') stats[name].OK++;
-            else if (status === 'WAITING') stats[name].WAITING++;
-            else if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
-            else if (status === 'SCRAP_PNLA') stats[name].SCRAP_PNLA++;
+    // Функция для отображения данных в таблице
+    function displayStats(stats, tableId) {
+      const tableBody = document.querySelector(`#${tableId} tbody`);
+      Object.keys(stats).forEach(name => {
+        const row = document.createElement('tr');
+        const data = stats[name];
 
-            stats[name].total++;
-          });
+        row.innerHTML = `
+          <td>${name}</td>
+          <td>${data.ndf}</td>
+          <td>${data.OK}</td>
+          <td>${data.WAITING}</td>
+          <td>${data['SCRAP TTL']}</td>
+          <td>${data['SCRAP PNLA']}</td>
+          <td>${data.total}</td>
+        `;
 
-          const tbody = document.querySelector(`#${sheet.id} tbody`);
-          Object.keys(stats).forEach(name => {
-            const d = stats[name];
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${name}</td>
-              <td>${d.NDF}</td>
-              <td>${d.OK}</td>
-              <td>${d.WAITING}</td>
-              <td>${d['SCRAP TTL']}</td>
-              <td>${d.SCRAP_PNLA}</td>
-              <td>${d.total}</td>
-            `;
-            tbody.appendChild(row);
-          });
-        })
-        .catch(error => console.error('Ошибка при получении данных:', error));
-    });
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Загрузка и обработка данных для каждого листа
+    async function loadAndDisplayData() {
+      for (const sheet of sheets) {
+        const data = await fetchData(sheet);
+        const stats = calculateStats(data);
+        const tableId = sheet === 'FI Station KOVALCHYK Y.' ? 'stats-table-kovalchyk' : 'stats-table-ulianovych';
+        displayStats(stats, tableId);
+      }
+    }
+
+    loadAndDisplayData();
   </script>
+
 </body>
 </html>
