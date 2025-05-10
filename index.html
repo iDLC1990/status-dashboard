@@ -9,59 +9,64 @@
       background-color: black;
       color: white;
       font-family: Arial, sans-serif;
+      text-align: center;
     }
 
     h1, h2 {
-      text-align: center;
-      color: #ADD8E6; /* Нежно-голубой */
+      color: #6CB1F2; /* Нежно голубой */
     }
 
     table {
       width: 80%;
       margin: 20px auto;
       border-collapse: collapse;
+      background-color: #2f2f2f; /* Серая таблица */
       border-radius: 10px;
-      background-color: #333;
-    }
-
-    table, th, td {
-      border: 1px solid #555;
     }
 
     th, td {
-      padding: 10px;
+      padding: 12px;
       text-align: center;
-      color: white;
+      font-size: 16px;
+      color: black;
     }
 
     th {
+      font-size: 18px;
       font-weight: bold;
-      font-size: 1.2em;
-      background-color: #444;
+      background-color: #4a4a4a; /* Темно-серый фон заголовков */
     }
 
     td {
-      font-size: 1em;
-      background-color: #666;
+      background-color: #cccccc; /* Светло-серая ячейка */
     }
 
-    .date-header {
-      text-align: center;
-      margin-top: 20px;
+    .header {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px;
+      align-items: center;
     }
+
+    .header span {
+      font-size: 20px;
+    }
+
   </style>
 </head>
 <body>
 
-  <h1>LCDR LIVE DATA 2025</h1>
-  <p class="date-header">DATE: <span id="current-date"></span></p>
+  <div class="header">
+    <span>LCDR LIVE DATA 2025</span>
+    <span id="date"></span>
+  </div>
 
   <h2>FI Station KOVALCHYK Y.</h2>
   <table id="stats-table-kov">
     <thead>
       <tr>
         <th>NAME</th>
-        <th>NDF</th>
+        <th>ndf</th>
         <th>OK</th>
         <th>WAITING</th>
         <th>SCRAP TTL</th>
@@ -79,7 +84,7 @@
     <thead>
       <tr>
         <th>NAME</th>
-        <th>NDF</th>
+        <th>ndf</th>
         <th>OK</th>
         <th>WAITING</th>
         <th>SCRAP TTL</th>
@@ -94,8 +99,7 @@
 
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
-    const sheetId = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
-    
+    const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
     async function getData(sheetName) {
@@ -110,14 +114,14 @@
       
       const allData = {
         'FI Station KOVALCHYK Y.': sheet1Data.slice(1).map(row => ({
-          name: row[5], // Фамилия в столбце F
-          status: row[4], // Статус в столбце E
-          date: row[0] // Дата в столбце A
+          name: row[5],
+          status: row[4],
+          date: row[0]
         })),
         'FI Station 2 ULANOVYCH.R': sheet2Data.slice(1).map(row => ({
-          name: row[5], // Фамилия в столбце F
-          status: row[4], // Статус в столбце E
-          date: row[0] // Дата в столбце A
+          name: row[5],
+          status: row[4],
+          date: row[0]
         }))
       };
 
@@ -126,7 +130,7 @@
 
     function getLastDate(data) {
       const dates = data.map(record => record.date);
-      return new Date(Math.max(...dates.map(date => new Date(date)))).toISOString().split('T')[0];
+      return new Date(Math.max(...dates.map(date => new Date(date))));
     }
 
     function calculateStats(data, lastDate) {
@@ -182,22 +186,27 @@
 
     async function init() {
       const data = await fetchData();
-      const currentDate = new Date().toISOString().split('T')[0];
-      document.getElementById("current-date").textContent = currentDate;
+      const date = new Date();
+      const dateString = date.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
+      document.getElementById('date').innerText = `DATE: ${dateString}`;
 
       Object.keys(data).forEach(sheetName => {
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
-        const filteredData = sheetData.filter(record => record.date === lastDate);
+        const lastDateString = lastDate.toISOString().split('T')[0];
+        const filteredData = sheetData.filter(record => record.date === lastDateString);
 
-        const result = calculateStats(filteredData, lastDate);
-        
+        const result = calculateStats(filteredData, lastDateString);
+
         displayStats(result, sheetName === 'FI Station KOVALCHYK Y.' ? 'stats-table-kov' : 'stats-table-ulan');
       });
     }
 
+    // Обновление данных каждую минуту
+    setInterval(init, 3 * 60 * 1000);
+
+    // Запуск первоначальной загрузки
     init();
-    setInterval(init, 180000); // Обновление каждые 3 минуты
   </script>
 
 </body>
