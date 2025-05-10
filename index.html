@@ -5,27 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Подсчёт статусов</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #fff;
-      color: #000;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 40px;
+      margin-bottom: 20px;
     }
-
     table, th, td {
       border: 1px solid black;
     }
-
     th, td {
       padding: 8px;
       text-align: center;
@@ -34,13 +21,14 @@
 </head>
 <body>
 
-  <h1>Статистика по статусам за последнюю дату</h1>
+  <h1>Статистика по статусам на последнюю дату</h1>
 
+  <h2>FI Station KOVALCHYK Y.</h2>
   <table id="stats-table-kov">
     <thead>
       <tr>
         <th>Имя</th>
-        <th>NDF</th>
+        <th>ndf</th>
         <th>OK</th>
         <th>WAITING</th>
         <th>SCRAP TTL</th>
@@ -48,14 +36,17 @@
         <th>Suma Całkowita</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Здесь будут динамически добавляться строки -->
+    </tbody>
   </table>
 
+  <h2>FI Station 2 ULANOVYCH.R</h2>
   <table id="stats-table-ulan">
     <thead>
       <tr>
         <th>Имя</th>
-        <th>NDF</th>
+        <th>ndf</th>
         <th>OK</th>
         <th>WAITING</th>
         <th>SCRAP TTL</th>
@@ -63,66 +54,100 @@
         <th>Suma Całkowita</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <!-- Здесь будут динамически добавляться строки -->
+    </tbody>
   </table>
 
-  <!-- JS-логика остаётся прежней -->
   <script>
+    // Ваш API-ключ для доступа к Google Sheets
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
+    
+    // URL для получения данных из Google Sheets
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
-
+    
+    // Функция для получения данных из таблицы
     async function getData(sheetName) {
-      const response = await fetch(`${sheetURL}${encodeURIComponent(sheetName)}?key=${apiKey}`);
+      const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
       const data = await response.json();
       return data.values;
     }
 
+    // Получение данных для обоих листов
     async function fetchData() {
       const sheet1Data = await getData('FI Station KOVALCHYK Y.');
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
-      return {
+      
+      // Объединяем данные с обоих листов
+      const allData = {
         'FI Station KOVALCHYK Y.': sheet1Data.slice(1).map(row => ({
-          name: row[5],
-          status: row[4],
-          date: row[0]
+          name: row[5], // Фамилия в столбце F
+          status: row[4], // Статус в столбце E
+          date: row[0] // Дата в столбце A
         })),
         'FI Station 2 ULANOVYCH.R': sheet2Data.slice(1).map(row => ({
-          name: row[5],
-          status: row[4],
-          date: row[0]
+          name: row[5], // Фамилия в столбце F
+          status: row[4], // Статус в столбце E
+          date: row[0] // Дата в столбце A
         }))
       };
+
+      return allData;
     }
 
+    // Функция для нахождения последней даты
     function getLastDate(data) {
-      const dates = data.map(r => new Date(r.date));
-      return new Date(Math.max(...dates));
+      const dates = data.map(record => record.date);
+      return new Date(Math.max(...dates.map(date => new Date(date))));
     }
 
+    // Функция для подсчёта статистики
     function calculateStats(data, lastDate) {
       const stats = {};
-      const dateStr = lastDate.toISOString().split('T')[0];
-      data.forEach(({ name, status, date }) => {
-        if (date !== dateStr) return;
-        if (!stats[name]) stats[name] = {
-          ndf: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0
-        };
+
+      // Перебираем все данные и считаем статусы для каждого человека за последнюю дату
+      data.forEach(record => {
+        const { name, status, date } = record;
+
+        // Если дата не совпадает с последней датой, пропускаем
+        if (date !== lastDate) return;
+
+        // Если такого человека ещё нет в объекте, создаём запись
+        if (!stats[name]) {
+          stats[name] = {
+            ndf: 0,
+            OK: 0,
+            WAITING: 0,
+            'SCRAP TTL': 0,
+            'SCRAP PNLA': 0,
+            total: 0,
+          };
+        }
+
+        // Увеличиваем счетчик для соответствующего статуса
         if (status === 'ndf') stats[name].ndf++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
         if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
         if (status === 'SCRAP PNLA') stats[name]['SCRAP PNLA']++;
+
+        // Увеличиваем общий счётчик
         stats[name].total++;
       });
+
       return stats;
     }
 
+    // Функция для отображения статистики на странице
     function displayStats(stats, tableId) {
-      const tbody = document.querySelector(`#${tableId} tbody`);
+      const statsTableBody = document.querySelector(`#${tableId} tbody`);
+      
+      // Динамически добавляем строки в таблицу
       Object.keys(stats).forEach(name => {
-        const data = stats[name];
         const row = document.createElement('tr');
+        const data = stats[name];
+
         row.innerHTML = `
           <td>${name}</td>
           <td>${data.ndf}</td>
@@ -132,23 +157,30 @@
           <td>${data['SCRAP PNLA']}</td>
           <td>${data.total}</td>
         `;
-        tbody.appendChild(row);
+
+        statsTableBody.appendChild(row);
       });
     }
 
+    // Основная функция для запуска всего процесса
     async function init() {
       const data = await fetchData();
+
+      // Для каждого листа получаем последнюю дату, фильтруем данные и отображаем статистику
       Object.keys(data).forEach(sheetName => {
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
-        const lastDateStr = lastDate.toISOString().split('T')[0];
-        const filtered = sheetData.filter(r => r.date === lastDateStr);
-        const stats = calculateStats(filtered, lastDateStr);
-        const tableId = sheetName.includes('KOVALCHYK') ? 'stats-table-kov' : 'stats-table-ulan';
-        displayStats(stats, tableId);
+        const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
+        const filteredData = sheetData.filter(record => record.date === lastDateString);
+
+        const result = calculateStats(filteredData, lastDateString);
+        
+        // Отображаем статистику для каждого листа в отдельной таблице
+        displayStats(result, sheetName === 'FI Station KOVALCHYK Y.' ? 'stats-table-kov' : 'stats-table-ulan');
       });
     }
 
+    // Запуск приложения
     init();
   </script>
 
