@@ -2,57 +2,33 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Статистика по статусам</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подсчёт статусов</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f5f5f5;
-      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #fff;
+      color: #000;
       padding: 20px;
-      color: #333;
     }
 
-    h1, h2 {
+    h1 {
       text-align: center;
-      color: #2c3e50;
     }
 
     table {
       width: 100%;
-      max-width: 900px;
-      margin: 20px auto;
       border-collapse: collapse;
-      background-color: #fff;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
+      margin-bottom: 40px;
     }
 
-    thead {
-      background-color: #3498db;
-      color: white;
+    table, th, td {
+      border: 1px solid black;
     }
 
     th, td {
-      padding: 12px 15px;
+      padding: 8px;
       text-align: center;
-      border-bottom: 1px solid #ddd;
-    }
-
-    tbody tr:nth-child(even) {
-      background-color: #f2f2f2;
-    }
-
-    tbody tr:hover {
-      background-color: #e0f7fa;
-    }
-
-    @media (max-width: 600px) {
-      th, td {
-        font-size: 12px;
-        padding: 8px;
-      }
     }
   </style>
 </head>
@@ -60,7 +36,6 @@
 
   <h1>Статистика по статусам за последнюю дату</h1>
 
-  <h2>FI Station KOVALCHYK Y.</h2>
   <table id="stats-table-kov">
     <thead>
       <tr>
@@ -76,7 +51,6 @@
     <tbody></tbody>
   </table>
 
-  <h2>FI Station 2 ULANOVYCH.R</h2>
   <table id="stats-table-ulan">
     <thead>
       <tr>
@@ -92,14 +66,14 @@
     <tbody></tbody>
   </table>
 
-  <!-- Скрипт оставьте без изменений из предыдущего ответа -->
+  <!-- JS-логика остаётся прежней -->
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '16MNddQGaidy__FBtRFeiw6HxRDQojBW2_c8Qznt62O8';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
     async function getData(sheetName) {
-      const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
+      const response = await fetch(`${sheetURL}${encodeURIComponent(sheetName)}?key=${apiKey}`);
       const data = await response.json();
       return data.values;
     }
