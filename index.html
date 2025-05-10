@@ -6,59 +6,57 @@
   <title>Подсчёт статусов</title>
   <style>
     body {
-      background-color: black;
-      color: white;
+      background-color: #000;
+      color: #fff;
       font-family: Arial, sans-serif;
+    }
+    h1, h2 {
+      color: #00bfff; /* Нежно-голубой цвет для заголовков */
+    }
+    h1 {
       text-align: center;
     }
-
-    h1, h2 {
-      color: #6CB1F2; /* Нежно голубой */
-    }
-
     table {
       width: 80%;
       margin: 20px auto;
       border-collapse: collapse;
-      background-color: #2f2f2f; /* Серая таблица */
+      background-color: #555; /* Серая таблица */
       border-radius: 10px;
     }
-
+    table, th, td {
+      border: 1px solid #fff;
+    }
     th, td {
-      padding: 12px;
+      padding: 10px;
       text-align: center;
-      font-size: 16px;
-      color: black;
     }
-
     th {
-      font-size: 18px;
       font-weight: bold;
-      background-color: #4a4a4a; /* Темно-серый фон заголовков */
+      font-size: 16px;
     }
-
     td {
-      background-color: #cccccc; /* Светло-серая ячейка */
+      font-size: 14px;
     }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      padding: 20px;
-      align-items: center;
+    th, td {
+      border-color: #fff;
     }
-
-    .header span {
-      font-size: 20px;
+    .container {
+      text-align: center;
     }
-
+    .date-info {
+      margin-top: 20px;
+      color: #00bfff;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <span>LCDR LIVE DATA 2025</span>
-    <span id="date"></span>
+  <div class="container">
+    <h1>LCDR LIVE DATA 2025</h1>
+    <div class="date-info">
+      <span id="date-info"></span> <!-- Для отображения даты -->
+    </div>
   </div>
 
   <h2>FI Station KOVALCHYK Y.</h2>
@@ -66,7 +64,7 @@
     <thead>
       <tr>
         <th>NAME</th>
-        <th>ndf</th>
+        <th>NDF</th>
         <th>OK</th>
         <th>WAITING</th>
         <th>SCRAP TTL</th>
@@ -75,7 +73,7 @@
       </tr>
     </thead>
     <tbody>
-      <!-- Здесь будут динамически добавляться строки -->
+      <!-- Строки будут добавляться динамически -->
     </tbody>
   </table>
 
@@ -84,7 +82,7 @@
     <thead>
       <tr>
         <th>NAME</th>
-        <th>ndf</th>
+        <th>NDF</th>
         <th>OK</th>
         <th>WAITING</th>
         <th>SCRAP TTL</th>
@@ -93,7 +91,7 @@
       </tr>
     </thead>
     <tbody>
-      <!-- Здесь будут динамически добавляться строки -->
+      <!-- Строки будут добавляться динамически -->
     </tbody>
   </table>
 
@@ -102,57 +100,56 @@
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
+    // Функция для получения данных из таблицы
     async function getData(sheetName) {
       const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
       const data = await response.json();
       return data.values;
     }
 
+    // Получение данных для обоих листов
     async function fetchData() {
       const sheet1Data = await getData('FI Station KOVALCHYK Y.');
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
       
+      // Объединяем данные с обоих листов
       const allData = {
         'FI Station KOVALCHYK Y.': sheet1Data.slice(1).map(row => ({
-          name: row[5],
-          status: row[4],
-          date: row[0]
+          name: row[5], // Фамилия в столбце F
+          status: row[4], // Статус в столбце E
+          date: row[0] // Дата в столбце A
         })),
         'FI Station 2 ULANOVYCH.R': sheet2Data.slice(1).map(row => ({
-          name: row[5],
-          status: row[4],
-          date: row[0]
+          name: row[5], // Фамилия в столбце F
+          status: row[4], // Статус в столбце E
+          date: row[0] // Дата в столбце A
         }))
       };
 
       return allData;
     }
 
-    // Функция для форматирования даты
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    }
-
+    // Функция для нахождения последней даты (игнорируем время)
     function getLastDate(data) {
-      const dates = data.map(record => record.date);
+      const dates = data.map(record => record.date.split(' ')[0]);
       return new Date(Math.max(...dates.map(date => new Date(date))));
     }
 
+    // Функция для подсчёта статистики
     function calculateStats(data, lastDate) {
       const stats = {};
 
+      // Перебираем все данные и считаем статусы для каждого человека за последнюю дату
       data.forEach(record => {
         const { name, status, date } = record;
-        if (date !== lastDate) return;
+        
+        // Сравниваем только дату (игнорируем время)
+        const recordDate = date.split(' ')[0];
 
+        // Если дата не совпадает с последней датой, пропускаем
+        if (recordDate !== lastDate) return;
+
+        // Если такого человека ещё нет в объекте, создаём запись
         if (!stats[name]) {
           stats[name] = {
             ndf: 0,
@@ -164,21 +161,25 @@
           };
         }
 
+        // Увеличиваем счетчик для соответствующего статуса
         if (status === 'ndf') stats[name].ndf++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
         if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
         if (status === 'SCRAP PNLA') stats[name]['SCRAP PNLA']++;
 
+        // Увеличиваем общий счётчик
         stats[name].total++;
       });
 
       return stats;
     }
 
+    // Функция для отображения статистики на странице
     function displayStats(stats, tableId) {
       const statsTableBody = document.querySelector(`#${tableId} tbody`);
       
+      // Динамически добавляем строки в таблицу
       Object.keys(stats).forEach(name => {
         const row = document.createElement('tr');
         const data = stats[name];
@@ -197,29 +198,33 @@
       });
     }
 
-    async function init() {
+    // Функция для обновления статистики
+    async function updateStats() {
       const data = await fetchData();
-      const date = new Date();
-      const dateString = formatDate(date); // Преобразуем дату в новый формат
-      document.getElementById('date').innerText = `DATE: ${dateString}`;
 
+      // Для каждого листа получаем последнюю дату, фильтруем данные и отображаем статистику
       Object.keys(data).forEach(sheetName => {
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
-        const lastDateString = lastDate.toISOString().split('T')[0];
-        const filteredData = sheetData.filter(record => record.date === lastDateString);
+        const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
+        const filteredData = sheetData.filter(record => record.date.split(' ')[0] === lastDateString);
 
         const result = calculateStats(filteredData, lastDateString);
-
+        
+        // Отображаем статистику для каждого листа в отдельной таблице
         displayStats(result, sheetName === 'FI Station KOVALCHYK Y.' ? 'stats-table-kov' : 'stats-table-ulan');
+        
+        // Обновляем дату на странице
+        const dateInfo = document.getElementById('date-info');
+        dateInfo.textContent = `DATE: ${lastDateString}`;
       });
     }
 
-    // Обновление данных каждую минуту
-    setInterval(init, 3 * 60 * 1000);
-
-    // Запуск первоначальной загрузки
-    init();
+    // Запускаем обновление статистики каждый 3 минуты
+    setInterval(updateStats, 3 * 60 * 1000);
+    
+    // Первоначальный запуск
+    updateStats();
   </script>
 
 </body>
