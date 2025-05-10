@@ -1,46 +1,69 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LCDR LIVE DATA</title>
   <style>
     body {
+      background-color: #000;
+      color: #000;
       font-family: Arial, sans-serif;
       padding: 20px;
+      margin: 0;
     }
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
     }
-    .header .date {
-      font-size: 18px;
-      font-weight: bold;
+
+    .header .date,
+    .header .title,
+    h2 {
+      color: #a3d7ff; /* Нежно-голубой */
     }
-    .header .title {
-      font-size: 20px;
-      font-weight: bold;
-    }
+
     table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 40px;
+      width: 90%;
+      margin: 0 auto 40px;
+      border-collapse: separate;
+      border-spacing: 0;
+      background-color: #ccc;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
     }
-    table, th, td {
-      border: 1px solid black;
+
+    th {
+      background-color: #bbb;
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 10px;
     }
-    th, td {
+
+    td {
       padding: 8px;
+      color: #000;
+      background-color: #eee;
+    }
+
+    th, td {
       text-align: center;
+    }
+
+    h2 {
+      text-align: center;
+      margin-top: 40px;
     }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <div class="date" id="latest-date">Дата: </div>
+    <div class="date" id="latest-date">DATE: </div>
     <div class="title">LCDR LIVE DATA 2025</div>
   </div>
 
@@ -166,7 +189,7 @@
       const allRecords = [...data['FI Station KOVALCHYK Y.'], ...data['FI Station 2 ULANOVYCH.R']];
       const lastDate = getLastDate(allRecords);
       const lastDateStr = lastDate.toISOString().split('T')[0];
-      document.getElementById('latest-date').textContent = `Дата: ${lastDateStr}`;
+      document.getElementById('latest-date').textContent = `DATE: ${lastDateStr}`;
 
       Object.entries(data).forEach(([sheetName, sheetData]) => {
         const filtered = sheetData.filter(r => r.date === lastDateStr);
@@ -178,6 +201,5 @@
 
     init();
   </script>
-
 </body>
 </html>
