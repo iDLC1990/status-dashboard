@@ -132,7 +132,7 @@
     // Функция для нахождения последней даты (игнорируем время)
     function getLastDate(data) {
       const dates = data.map(record => {
-        const dateParts = record.date.split(' ')[0];
+        const dateParts = record.date ? record.date.split(' ')[0] : ''; // Проверка на наличие даты
         if (dateParts) {
           return new Date(dateParts);
         }
@@ -183,19 +183,13 @@
       return stats;
     }
 
-    // Функция для очистки таблицы перед обновлением
-    function clearTable(tableId) {
-      const statsTableBody = document.querySelector(`#${tableId} tbody`);
-      statsTableBody.innerHTML = ''; // Очищаем все строки в таблице
-    }
-
     // Функция для отображения статистики на странице
     function displayStats(stats, tableId) {
-      // Очищаем таблицу перед добавлением новых данных
-      clearTable(tableId);
-
       const statsTableBody = document.querySelector(`#${tableId} tbody`);
       
+      // Очищаем таблицу перед добавлением новых данных
+      statsTableBody.innerHTML = '';
+
       // Динамически добавляем строки в таблицу
       Object.keys(stats).forEach(name => {
         const row = document.createElement('tr');
@@ -219,12 +213,20 @@
     async function updateStats() {
       const data = await fetchData();
 
+      // Проверка, если данные для второго листа пустые или неправильные
+      console.log('Data for FI Station KOVALCHYK Y.:', data['FI Station KOVALCHYK Y.']);
+      console.log('Data for FI Station 2 ULANOVYCH.R:', data['FI Station 2 ULANOVYCH.R']);
+
       // Для каждого листа получаем последнюю дату, фильтруем данные и отображаем статистику
       Object.keys(data).forEach(sheetName => {
         const sheetData = data[sheetName];
         const lastDate = getLastDate(sheetData);
         const lastDateString = lastDate.toISOString().split('T')[0]; // Преобразуем дату в строку (YYYY-MM-DD)
         const filteredData = sheetData.filter(record => record.date.split(' ')[0] === lastDateString);
+
+        // Отладка для проверки фильтрации
+        console.log(`Last date for ${sheetName}: ${lastDateString}`);
+        console.log(`Filtered data for ${sheetName}:`, filteredData);
 
         const result = calculateStats(filteredData, lastDateString);
         
