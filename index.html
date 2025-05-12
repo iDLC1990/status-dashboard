@@ -4,42 +4,49 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LCDR LIVE DATA</title>
+
   <style>
+    /* Фон */
     body {
       background-color: #000;
       color: #fff;
       font-family: Arial, sans-serif;
     }
 
+    /* голова */
     .header {
       display: flex;
-      justify-content: space-between;
+      justify-content: space-between; /* голова лево право */
       align-items: center;
       padding: 20px 10%;
       background-color: #111;
     }
 
+    /* голова LCDR */
     .header h1 {
       margin: 0;
-      color: #00bfff;
+      color: #008080;
       font-size: 24px;
     }
 
+    /* голова дата */
     .date-info {
-      color: #00bfff;
-      font-size: 16px;
+      color: #008080;
+      font-size: 24px;
     }
 
+    /* Контейнер таблицы с отступами */
     .table-container {
       width: 80%;
       margin: 20px auto;
     }
 
+    /* кнопка юры и моя */
     .table-button {
       display: block;
       width: 100%;
       padding: 12px;
-      background-color: #00bfff;
+      background-color: #008080;
       color: #000;
       font-size: 18px;
       font-weight: bold;
@@ -48,9 +55,10 @@
       cursor: pointer;
       text-align: left;
       padding-left: 20px;
-      margin-bottom: -1px;
+      margin-bottom: -1px; /* убираем зазор перед таблицей */
     }
 
+    /* основа таблица */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -58,10 +66,12 @@
       border-radius: 0 0 10px 10px;
     }
 
+    /* обод таблицы */
     table, th, td {
       border: 1px solid #fff;
     }
 
+    /* подписи столбцов */
     th, td {
       padding: 10px;
       text-align: center;
@@ -76,6 +86,7 @@
       font-size: 14px;
     }
 
+    /* сумма низ */
     .total-row {
       font-weight: bold;
       background-color: #333;
@@ -84,11 +95,13 @@
   </style>
 </head>
 <body>
+  <!-- голова инфо дата -->
   <div class="header">
     <h1>LCDR LIVE DATA 2025</h1>
     <div class="date-info" id="date-info">DATE: --</div>
   </div>
 
+  <!-- Блок Юра -->
   <div class="table-container">
     <button class="table-button">FI Station KOVALCHYK Y.</button>
     <table id="stats-table-kov">
@@ -103,10 +116,11 @@
           <th>Suma Całkowita</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody></tbody> <!-- данные   JS -->
     </table>
   </div>
 
+  <!-- мой блок -->
   <div class="table-container">
     <button class="table-button">FI Station 2 ULANOVYCH.R</button>
     <table id="stats-table-ulan">
@@ -125,20 +139,25 @@
     </table>
   </div>
 
+  <!-- скрипт на данные -->
   <script>
-    const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
+    // API
+    const apiKey = 'YOUR_API_KEY'; // <-- тест без ключа
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
+    // блок отбор инфы
     async function getData(sheetName) {
       const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
       const data = await response.json();
       return data.values;
     }
 
+    // блок сбор инфы
     async function fetchData() {
       const sheet1Data = await getData('FI Station KOVALCHYK Y.');
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
+
       return {
         'FI Station KOVALCHYK Y.': sheet1Data.slice(1).map(row => ({
           name: row[5],
@@ -153,6 +172,7 @@
       };
     }
 
+    // блок последняя дата
     function getLastDate(data) {
       const dates = data.map(record => {
         const datePart = record.date?.split(' ')[0];
@@ -161,6 +181,7 @@
       return new Date(Math.max(...dates));
     }
 
+    // Блок счётик
     function calculateStats(data) {
       const stats = {};
       data.forEach(({ name, status }) => {
@@ -174,6 +195,7 @@
             total: 0
           };
         }
+
         if (status === 'NDF') stats[name].NDF++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
@@ -184,10 +206,12 @@
       return stats;
     }
 
+    // вывод в таблицу на сайте
     function displayStats(stats, tableId) {
       const statsTableBody = document.querySelector(`#${tableId} tbody`);
       statsTableBody.innerHTML = '';
 
+      // суммы по колонках право
       const totals = {
         NDF: 0,
         OK: 0,
@@ -197,6 +221,7 @@
         total: 0
       };
 
+      // блок строки для каждого тестовый
       Object.keys(stats).forEach(name => {
         const data = stats[name];
         const row = document.createElement('tr');
@@ -211,6 +236,7 @@
         `;
         statsTableBody.appendChild(row);
 
+        // сумма низ
         totals.NDF += data.NDF;
         totals.OK += data.OK;
         totals.WAITING += data.WAITING;
@@ -219,6 +245,7 @@
         totals.total += data.total;
       });
 
+      //  блок сумма низ
       const totalRow = document.createElement('tr');
       totalRow.className = 'total-row';
       totalRow.innerHTML = `
@@ -233,26 +260,36 @@
       statsTableBody.appendChild(totalRow);
     }
 
+    // обнова табдицы даты
     async function updateStats() {
       const data = await fetchData();
+
+      // связка лист таблица
       const tableIdMap = {
         'FI Station KOVALCHYK Y.': 'stats-table-kov',
         'FI Station 2 ULANOVYCH.R': 'stats-table-ulan'
       };
 
+      // обработка всей страницы
       Object.entries(data).forEach(([sheetName, sheetData]) => {
         const lastDate = getLastDate(sheetData);
         const lastDateString = lastDate.toISOString().split('T')[0];
+
+        // оставить последеюю дату
         const filteredData = sheetData.filter(record => {
           const recordDate = record.date?.split(' ')[0] || '';
           return recordDate === lastDateString;
         });
+
         const result = calculateStats(filteredData);
         displayStats(result, tableIdMap[sheetName]);
+
+        // Обнова дата заголовок
         document.getElementById('date-info').textContent = `DATE: ${lastDateString}`;
       });
     }
 
+    // автообнова таблицы
     setInterval(updateStats, 1 * 60 * 1000);
     updateStats();
   </script>
