@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LCDR LIVE DATA</title>
   <style>
     body {
@@ -11,18 +11,22 @@
       font-family: Arial, sans-serif;
     }
 
-    h1 {
-      text-align: center;
-      color: #008080;
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 10%;
+      background-color: #111;
     }
 
-    .container {
-      text-align: center;
+    .header h1 {
+      margin: 0;
+      color: #00bfff;
+      font-size: 24px;
     }
 
     .date-info {
-      margin-top: 20px;
-      color: #008080;
+      color: #00bfff;
       font-size: 16px;
     }
 
@@ -35,7 +39,7 @@
       display: block;
       width: 100%;
       padding: 12px;
-      background-color: #008080;
+      background-color: #00bfff;
       color: #000;
       font-size: 18px;
       font-weight: bold;
@@ -80,11 +84,9 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="header">
     <h1>LCDR LIVE DATA 2025</h1>
-    <div class="date-info">
-      <span id="date-info"></span>
-    </div>
+    <div class="date-info" id="date-info">DATE: --</div>
   </div>
 
   <div class="table-container">
