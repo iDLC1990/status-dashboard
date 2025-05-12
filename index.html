@@ -10,41 +10,68 @@
       color: #fff;
       font-family: Arial, sans-serif;
     }
-    h1, h2 {
-      color: #00bfff;
-    }
+
     h1 {
       text-align: center;
+      color: #00bfff;
     }
-    table {
-      width: 80%;
-      margin: 20px auto;
-      border-collapse: collapse;
-      background-color: #555;
-      border-radius: 10px;
-    }
-    table, th, td {
-      border: 1px solid #fff;
-    }
-    th, td {
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      font-weight: bold;
-      font-size: 16px;
-    }
-    td {
-      font-size: 14px;
-    }
+
     .container {
       text-align: center;
     }
+
     .date-info {
       margin-top: 20px;
       color: #00bfff;
       font-size: 16px;
     }
+
+    .table-container {
+      width: 80%;
+      margin: 20px auto;
+    }
+
+    .table-button {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #00bfff;
+      color: #000;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      text-align: left;
+      padding-left: 20px;
+      margin-bottom: -1px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #555;
+      border-radius: 0 0 10px 10px;
+    }
+
+    table, th, td {
+      border: 1px solid #fff;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    td {
+      font-size: 14px;
+    }
+
     .total-row {
       font-weight: bold;
       background-color: #333;
@@ -60,37 +87,41 @@
     </div>
   </div>
 
-  <h2>FI Station KOVALCHYK Y.</h2>
-  <table id="stats-table-kov">
-    <thead>
-      <tr>
-        <th>NAME</th>
-        <th>NDF</th>
-        <th>OK</th>
-        <th>WAITING</th>
-        <th>SCRAP TTL</th>
-        <th>SCRAP PNLA</th>
-        <th>Suma Całkowita</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="table-container">
+    <button class="table-button">FI Station KOVALCHYK Y.</button>
+    <table id="stats-table-kov">
+      <thead>
+        <tr>
+          <th>NAME</th>
+          <th>NDF</th>
+          <th>OK</th>
+          <th>WAITING</th>
+          <th>SCRAP TTL</th>
+          <th>SCRAP PNLA</th>
+          <th>Suma Całkowita</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-  <h2>FI Station 2 ULANOVYCH.R</h2>
-  <table id="stats-table-ulan">
-    <thead>
-      <tr>
-        <th>NAME</th>
-        <th>NDF</th>
-        <th>OK</th>
-        <th>WAITING</th>
-        <th>SCRAP TTL</th>
-        <th>SCRAP PNLA</th>
-        <th>Suma Całkowita</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="table-container">
+    <button class="table-button">FI Station 2 ULANOVYCH.R</button>
+    <table id="stats-table-ulan">
+      <thead>
+        <tr>
+          <th>NAME</th>
+          <th>NDF</th>
+          <th>OK</th>
+          <th>WAITING</th>
+          <th>SCRAP TTL</th>
+          <th>SCRAP PNLA</th>
+          <th>Suma Całkowita</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
@@ -186,7 +217,6 @@
         totals.total += data.total;
       });
 
-     
       const totalRow = document.createElement('tr');
       totalRow.className = 'total-row';
       totalRow.innerHTML = `
