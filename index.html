@@ -69,11 +69,11 @@
 
     th {
       font-weight: bold;
-      font-size: 16px;
+      font-size: 20px;
     }
 
     td {
-      font-size: 14px;
+      font-size: 20px;
     }
 
     .total-row {
@@ -100,7 +100,7 @@
           <th>WAITING</th>
           <th>SCRAP TTL</th>
           <th>SCRAP PNLA</th>
-          <th>Suma Całkowita</th>
+          <th>SUMA CALKOWITA</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -118,7 +118,7 @@
           <th>WAITING</th>
           <th>SCRAP TTL</th>
           <th>SCRAP PNLA</th>
-          <th>Suma Całkowita</th>
+          <th>SUMA CALKOWITA</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -222,7 +222,7 @@
       const totalRow = document.createElement('tr');
       totalRow.className = 'total-row';
       totalRow.innerHTML = `
-        <td>Suma całkowita</td>
+        <td>SUMA CALKOWITA</td>
         <td>${totals.NDF}</td>
         <td>${totals.OK}</td>
         <td>${totals.WAITING}</td>
