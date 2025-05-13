@@ -197,8 +197,10 @@
         total: 0
       };
 
-      Object.keys(stats).forEach(name => {
-        const data = stats[name];
+      // Преобразование в массив и сортировка по убыванию OK
+      const sortedStats = Object.entries(stats).sort(([, a], [, b]) => b.OK - a.OK);
+
+      sortedStats.forEach(([name, data]) => {
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${name}</td>
@@ -253,7 +255,7 @@
       });
     }
 
-    setInterval(updateStats, 1 * 60 * 1000);
+    setInterval(updateStats, 60 * 1000);
     updateStats();
   </script>
 </body>
