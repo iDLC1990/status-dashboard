@@ -125,6 +125,34 @@
     </table>
   </div>
 
+  <div class="table-container">
+    <button class="table-button">Podsumowanie 2 Stacji</button>
+    <table id="summary-table">
+      <thead>
+        <tr>
+          <th>Podsumowanie</th>
+          <th>NDF</th>
+          <th>OK</th>
+          <th>WAITING</th>
+          <th>SCRAP TTL</th>
+          <th>SCRAP PNLA</th>
+          <th>SUMA CALKOWITA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="total-row">
+          <td>SUMA</td>
+          <td id="sum-ndf">0</td>
+          <td id="sum-ok">0</td>
+          <td id="sum-waiting">0</td>
+          <td id="sum-scrap-ttl">0</td>
+          <td id="sum-scrap-pnla">0</td>
+          <td id="sum-total">0</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
@@ -197,7 +225,6 @@
         total: 0
       };
 
-    
       const sortedStats = Object.entries(stats).sort(([, a], [, b]) => b.OK - a.OK);
 
       sortedStats.forEach(([name, data]) => {
@@ -233,6 +260,17 @@
         <td>${totals.total}</td>
       `;
       statsTableBody.appendChild(totalRow);
+
+      return totals;
+    }
+
+    function updateSummaryTotals(total1, total2) {
+      document.getElementById('sum-ndf').textContent = total1.NDF + total2.NDF;
+      document.getElementById('sum-ok').textContent = total1.OK + total2.OK;
+      document.getElementById('sum-waiting').textContent = total1.WAITING + total2.WAITING;
+      document.getElementById('sum-scrap-ttl').textContent = total1['SCRAP TTL'] + total2['SCRAP TTL'];
+      document.getElementById('sum-scrap-pnla').textContent = total1['SCRAP PNLA'] + total2['SCRAP PNLA'];
+      document.getElementById('sum-total').textContent = total1.total + total2.total;
     }
 
     async function updateStats() {
@@ -242,6 +280,8 @@
         'FI Station 2 ULANOVYCH.R': 'stats-table-ulan'
       };
 
+      const allTotals = {};
+
       Object.entries(data).forEach(([sheetName, sheetData]) => {
         const lastDate = getLastDate(sheetData);
         const lastDateString = lastDate.toISOString().split('T')[0];
@@ -250,9 +290,14 @@
           return recordDate === lastDateString;
         });
         const result = calculateStats(filteredData);
-        displayStats(result, tableIdMap[sheetName]);
+        const totals = displayStats(result, tableIdMap[sheetName]);
+        allTotals[sheetName] = totals;
         document.getElementById('date-info').textContent = `DATE: ${lastDateString}`;
       });
+
+      const t1 = allTotals['FI Station KOVALCHYK Y.'] || {NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0};
+      const t2 = allTotals['FI Station 2 ULANOVYCH.R'] || {NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0};
+      updateSummaryTotals(t1, t2);
     }
 
     setInterval(updateStats, 60 * 1000);
