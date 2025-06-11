@@ -2,14 +2,14 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LCDR LIVE DATA</title>
   <style>
     body {
       background-color: #000;
       color: #fff;
       font-family: Arial, sans-serif;
-      overflow-x: hidden; /* чтобы не было горизонтального скролла */
+      overflow-x: hidden; /* чтобы не было горизонтальной прокрутки из-за анимации */
     }
 
     .header {
@@ -83,41 +83,15 @@
       color: #00ffcc;
     }
 
-    /* Анимация кота */
-    @keyframes walk {
-      0% {
-        left: -150px;
-        transform: scaleX(1);
-      }
-      50% {
-        left: calc(100% - 150px);
-        transform: scaleX(-1);
-      }
-      100% {
-        left: -150px;
-        transform: scaleX(1);
-      }
-    }
-
-    @keyframes disappear {
-      0%, 90% {
-        opacity: 1;
-      }
-      95%, 100% {
-        opacity: 0;
-      }
-    }
-
-    .cat {
+    /* Стили для Lottie анимации Чеширского кота */
+    #lottie-cat {
       position: fixed;
       bottom: 20px;
-      left: -150px;
-      width: 120px;
-      height: auto;
-      z-index: 1000;
-      user-select: none;
-      pointer-events: none;
-      animation: walk 10s linear infinite, disappear 10s linear infinite;
+      width: 150px;
+      height: 150px;
+      pointer-events: none; /* чтобы не мешал кликам */
+      opacity: 1;
+      left: -160px; /* старт слева за экраном */
     }
   </style>
 </head>
@@ -145,21 +119,48 @@
     </table>
   </div>
 
-  <!-- Чеширский кот в SVG -->
-  <svg class="cat" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="120" height="120" aria-label="Чеширский кот" role="img">
-    <!-- Голова -->
-    <circle cx="32" cy="32" r="20" fill="#ff6" stroke="#000" stroke-width="2"/>
-    <!-- Уши -->
-    <polygon points="12,20 22,10 25,30" fill="#ff6" stroke="#000" stroke-width="2"/>
-    <polygon points="52,20 42,10 39,30" fill="#ff6" stroke="#000" stroke-width="2"/>
-    <!-- Глаза -->
-    <ellipse cx="24" cy="32" rx="5" ry="7" fill="#000" />
-    <ellipse cx="40" cy="32" rx="5" ry="7" fill="#000" />
-    <!-- Улыбка -->
-    <path d="M20 44 Q32 54 44 44" stroke="#000" stroke-width="3" fill="none" />
-  </svg>
+  <!-- Контейнер для анимации -->
+  <div id="lottie-cat"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.5/lottie.min.js"></script>
   <script>
+    // Инициализация Lottie анимации Чеширского кота
+    const lottieCat = lottie.loadAnimation({
+      container: document.getElementById('lottie-cat'),
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: 'https://assets9.lottiefiles.com/packages/lf20_2glbzy7k.json' // кот анимация
+    });
+
+    // Функция анимации движения кота слева направо и исчезновения
+    function animateCat() {
+      const cat = document.getElementById('lottie-cat');
+      const screenWidth = window.innerWidth;
+      cat.style.transition = 'none';
+      cat.style.left = '-160px';
+      cat.style.opacity = '1';
+
+      // Начинаем движение через небольшой таймаут, чтобы transition сработал
+      setTimeout(() => {
+        cat.style.transition = 'left 8s linear, opacity 1s linear';
+        cat.style.left = screenWidth + 'px'; // двигается справа за экран
+
+        // Исчезает в конце движения (последняя секунда)
+        setTimeout(() => {
+          cat.style.opacity = '0';
+        }, 7000);
+
+      }, 50);
+
+      // Запустить заново через 10 секунд (1 цикл)
+      setTimeout(animateCat, 10000);
+    }
+
+    animateCat();
+
+    // ================== Твой существующий код ==================
+
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
