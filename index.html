@@ -9,7 +9,7 @@
       background-color: #000;
       color: #fff;
       font-family: Arial, sans-serif;
-      overflow-x: hidden; /* Чтобы не было горизонтальной прокрутки */
+      overflow-x: hidden;
     }
 
     .header {
@@ -83,7 +83,6 @@
       color: #00ffcc;
     }
 
-    /* Lottie анимация кота */
     #lottie-cat {
       position: fixed;
       bottom: 20px;
@@ -91,7 +90,7 @@
       height: 150px;
       pointer-events: none;
       opacity: 1;
-      left: -160px; /* начальная позиция — за экраном слева */
+      left: -160px;
       transition: left 8s linear, opacity 1s linear;
       z-index: 1000;
     }
@@ -121,47 +120,47 @@
     </table>
   </div>
 
-  <!-- Контейнер для анимации -->
+  <!-- Анимация Чеширского кота -->
   <div id="lottie-cat"></div>
 
+  <!-- Подключаем библиотеку Lottie -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.5/lottie.min.js"></script>
   <script>
+    // Загружаем анимацию кота
     const lottieCat = lottie.loadAnimation({
       container: document.getElementById('lottie-cat'),
       renderer: 'svg',
       loop: true,
       autoplay: true,
-      path: 'https://assets9.lottiefiles.com/packages/lf20_2glbzy7k.json' // анимация кота
+      path: 'https://assets7.lottiefiles.com/packages/lf20_GtW6Bv.json'
     });
 
+    // Анимация движения кота слева направо
     function animateCat() {
       const cat = document.getElementById('lottie-cat');
       const screenWidth = window.innerWidth;
 
-      // Сбросим позицию и прозрачность
       cat.style.transition = 'none';
       cat.style.left = '-160px';
       cat.style.opacity = '1';
 
-      // Запуск анимации движения через небольшой таймаут
       setTimeout(() => {
         cat.style.transition = 'left 8s linear, opacity 1s linear';
-        cat.style.left = (screenWidth + 160) + 'px'; // уходим вправо за экран
+        cat.style.left = (screenWidth + 160) + 'px';
 
-        // Исчезаем за 1 секунду перед выходом
         setTimeout(() => {
           cat.style.opacity = '0';
         }, 7000);
       }, 50);
 
-      // Повторяем каждую 10 секунду
       setTimeout(animateCat, 10000);
     }
 
     animateCat();
+  </script>
 
-    // ========== Твой существующий код ===========
-
+  <!-- Скрипт для загрузки данных из Google Sheets -->
+  <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
