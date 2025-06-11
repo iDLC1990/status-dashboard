@@ -9,7 +9,7 @@
       background-color: #000;
       color: #fff;
       font-family: Arial, sans-serif;
-      overflow-x: hidden; /* чтобы не было горизонтальной прокрутки из-за анимации */
+      overflow-x: hidden; /* Чтобы не было горизонтальной прокрутки */
     }
 
     .header {
@@ -83,15 +83,17 @@
       color: #00ffcc;
     }
 
-    /* Стили для Lottie анимации Чеширского кота */
+    /* Lottie анимация кота */
     #lottie-cat {
       position: fixed;
       bottom: 20px;
       width: 150px;
       height: 150px;
-      pointer-events: none; /* чтобы не мешал кликам */
+      pointer-events: none;
       opacity: 1;
-      left: -160px; /* старт слева за экраном */
+      left: -160px; /* начальная позиция — за экраном слева */
+      transition: left 8s linear, opacity 1s linear;
+      z-index: 1000;
     }
   </style>
 </head>
@@ -124,42 +126,41 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.5/lottie.min.js"></script>
   <script>
-    // Инициализация Lottie анимации Чеширского кота
     const lottieCat = lottie.loadAnimation({
       container: document.getElementById('lottie-cat'),
       renderer: 'svg',
       loop: true,
       autoplay: true,
-      path: 'https://assets9.lottiefiles.com/packages/lf20_2glbzy7k.json' // кот анимация
+      path: 'https://assets9.lottiefiles.com/packages/lf20_2glbzy7k.json' // анимация кота
     });
 
-    // Функция анимации движения кота слева направо и исчезновения
     function animateCat() {
       const cat = document.getElementById('lottie-cat');
       const screenWidth = window.innerWidth;
+
+      // Сбросим позицию и прозрачность
       cat.style.transition = 'none';
       cat.style.left = '-160px';
       cat.style.opacity = '1';
 
-      // Начинаем движение через небольшой таймаут, чтобы transition сработал
+      // Запуск анимации движения через небольшой таймаут
       setTimeout(() => {
         cat.style.transition = 'left 8s linear, opacity 1s linear';
-        cat.style.left = screenWidth + 'px'; // двигается справа за экран
+        cat.style.left = (screenWidth + 160) + 'px'; // уходим вправо за экран
 
-        // Исчезает в конце движения (последняя секунда)
+        // Исчезаем за 1 секунду перед выходом
         setTimeout(() => {
           cat.style.opacity = '0';
         }, 7000);
-
       }, 50);
 
-      // Запустить заново через 10 секунд (1 цикл)
+      // Повторяем каждую 10 секунду
       setTimeout(animateCat, 10000);
     }
 
     animateCat();
 
-    // ================== Твой существующий код ==================
+    // ========== Твой существующий код ===========
 
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
