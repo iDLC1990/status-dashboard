@@ -9,6 +9,7 @@
       background-color: #000;
       color: #fff;
       font-family: Arial, sans-serif;
+      overflow-x: hidden; /* чтобы не было горизонтального скролла */
     }
 
     .header {
@@ -81,6 +82,43 @@
       background-color: #333;
       color: #00ffcc;
     }
+
+    /* Анимация кота */
+    .cat {
+      position: fixed;
+      bottom: 20px;
+      left: -150px;
+      width: 120px;
+      height: auto;
+      animation: walk 10s linear infinite, disappear 10s linear infinite;
+      z-index: 1000;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    @keyframes walk {
+      0% {
+        left: -150px;
+        transform: scaleX(1);
+      }
+      50% {
+        left: calc(100% - 150px);
+        transform: scaleX(-1); /* кот разворачивается лицом влево */
+      }
+      100% {
+        left: -150px;
+        transform: scaleX(1);
+      }
+    }
+
+    @keyframes disappear {
+      0%, 90% {
+        opacity: 1;
+      }
+      95%, 100% {
+        opacity: 0;
+      }
+    }
   </style>
 </head>
 <body>
@@ -106,6 +144,9 @@
       <tbody></tbody>
     </table>
   </div>
+
+  <!-- Чеширский кот -->
+  <img class="cat" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Cheshire_Cat_Tenniel.png/220px-Cheshire_Cat_Tenniel.png" alt="Чеширский кот">
 
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
