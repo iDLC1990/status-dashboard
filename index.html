@@ -84,18 +84,6 @@
     }
 
     /* Анимация кота */
-    .cat {
-      position: fixed;
-      bottom: 20px;
-      left: -150px;
-      width: 120px;
-      height: auto;
-      animation: walk 10s linear infinite, disappear 10s linear infinite;
-      z-index: 1000;
-      user-select: none;
-      pointer-events: none;
-    }
-
     @keyframes walk {
       0% {
         left: -150px;
@@ -103,7 +91,7 @@
       }
       50% {
         left: calc(100% - 150px);
-        transform: scaleX(-1); /* кот разворачивается лицом влево */
+        transform: scaleX(-1);
       }
       100% {
         left: -150px;
@@ -118,6 +106,18 @@
       95%, 100% {
         opacity: 0;
       }
+    }
+
+    .cat {
+      position: fixed;
+      bottom: 20px;
+      left: -150px;
+      width: 120px;
+      height: auto;
+      z-index: 1000;
+      user-select: none;
+      pointer-events: none;
+      animation: walk 10s linear infinite, disappear 10s linear infinite;
     }
   </style>
 </head>
@@ -145,8 +145,19 @@
     </table>
   </div>
 
-  <!-- Чеширский кот -->
-  <img class="cat" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Cheshire_Cat_Tenniel.png/220px-Cheshire_Cat_Tenniel.png" alt="Чеширский кот">
+  <!-- Чеширский кот в SVG -->
+  <svg class="cat" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="120" height="120" aria-label="Чеширский кот" role="img">
+    <!-- Голова -->
+    <circle cx="32" cy="32" r="20" fill="#ff6" stroke="#000" stroke-width="2"/>
+    <!-- Уши -->
+    <polygon points="12,20 22,10 25,30" fill="#ff6" stroke="#000" stroke-width="2"/>
+    <polygon points="52,20 42,10 39,30" fill="#ff6" stroke="#000" stroke-width="2"/>
+    <!-- Глаза -->
+    <ellipse cx="24" cy="32" rx="5" ry="7" fill="#000" />
+    <ellipse cx="40" cy="32" rx="5" ry="7" fill="#000" />
+    <!-- Улыбка -->
+    <path d="M20 44 Q32 54 44 44" stroke="#000" stroke-width="3" fill="none" />
+  </svg>
 
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
