@@ -2,14 +2,13 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LCDR LIVE DATA</title>
   <style>
     body {
       background-color: #000;
       color: #fff;
       font-family: Arial, sans-serif;
-      overflow-x: hidden;
     }
 
     .header {
@@ -82,18 +81,6 @@
       background-color: #333;
       color: #00ffcc;
     }
-
-    #lottie-cat {
-      position: fixed;
-      bottom: 20px;
-      width: 150px;
-      height: 150px;
-      pointer-events: none;
-      opacity: 1;
-      left: -160px;
-      transition: left 8s linear, opacity 1s linear;
-      z-index: 1000;
-    }
   </style>
 </head>
 <body>
@@ -120,46 +107,6 @@
     </table>
   </div>
 
-  <!-- Анимация Чеширского кота -->
-  <div id="lottie-cat"></div>
-
-  <!-- Подключаем библиотеку Lottie -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.5/lottie.min.js"></script>
-  <script>
-    // Загружаем анимацию кота (альтернативный рабочий JSON)
-    const lottieCat = lottie.loadAnimation({
-      container: document.getElementById('lottie-cat'),
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: 'https://assets9.lottiefiles.com/packages/lf20_hkmlg8vx.json' // рабочий путь
-    });
-
-    // Анимация движения кота слева направо
-    function animateCat() {
-      const cat = document.getElementById('lottie-cat');
-      const screenWidth = window.innerWidth;
-
-      cat.style.transition = 'none';
-      cat.style.left = '-160px';
-      cat.style.opacity = '1';
-
-      setTimeout(() => {
-        cat.style.transition = 'left 8s linear, opacity 1s linear';
-        cat.style.left = (screenWidth + 160) + 'px';
-
-        setTimeout(() => {
-          cat.style.opacity = '0';
-        }, 7000);
-      }, 50);
-
-      setTimeout(animateCat, 10000);
-    }
-
-    animateCat();
-  </script>
-
-  <!-- Скрипт для загрузки данных из Google Sheets -->
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
