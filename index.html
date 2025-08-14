@@ -10,6 +10,7 @@
       color: #fff;
       font-family: Arial, sans-serif;
     }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -17,19 +18,23 @@
       padding: 20px 10%;
       background-color: #112;
     }
+
     .header h1 {
       margin: 0;
       color: #008080;
       font-size: 24px;
     }
+
     .date-info {
-      color: #008080; /* исправлено двойной # */
+      color: #008080;
       font-size: 24px;
     }
+
     .table-container {
-      width: 80%;
+      width: 90%;
       margin: 24px auto;
     }
+
     .table-button {
       display: block;
       width: 100%;
@@ -45,26 +50,28 @@
       padding-left: 20px;
       margin-bottom: -1px;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       background-color: #555;
       border-radius: 0 0 10px 10px;
     }
+
     table, th, td {
       border: 1px solid #fff;
     }
+
     th, td {
-      padding: 10px;
+      padding: 8px;
       text-align: center;
+      font-size: 14px;
     }
+
     th {
       font-weight: bold;
-      font-size: 16px;
     }
-    td {
-      font-size: 16px;
-    }
+
     .total-row {
       font-weight: bold;
       background-color: #333;
@@ -101,6 +108,7 @@
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
+    // Таблица диагоналей
     const diagonalMap = {
       '860': 86, '850': 85, '750': 75, '700': 70, '650': 65, '580': 58, '575': 58,
       '550': 55, '545': 55, '500': 50, '498': 50, '495': 50, '490': 50,
@@ -111,14 +119,6 @@
       '278': 27, '275': 27, '270': 27,
       '248': 24, '245': 24, '240': 24, '238': 24, '235': 24, '230': 24
     };
-
-    function extractDiagonal(serial) {
-      if (!serial) return null;
-      const match = serial.substring(3).match(/^\d+/);
-      if (!match) return null;
-      const rawDiag = match[0];
-      return diagonalMap[rawDiag] || rawDiag;
-    }
 
     async function getData(sheetName) {
       const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
@@ -131,10 +131,10 @@
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
       const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
       return combined.map(row => ({
-        date: row[0],
-        status: row[4],
         name: row[5],
-        diagonal: extractDiagonal(row[2]) // row[2] — серийный номер
+        status: row[4],
+        serial: row[2],
+        date: row[0]
       }));
     }
 
@@ -149,9 +149,7 @@
     function calculateStats(data) {
       const stats = {};
       data.forEach(({ name, status }) => {
-        if (!stats[name]) {
-          stats[name] = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
-        }
+        if (!stats[name]) stats[name] = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
         if (status === 'NDF') stats[name].NDF++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
@@ -166,7 +164,7 @@
       const tbody = document.querySelector('#combined-table tbody');
       tbody.innerHTML = '';
 
-      const totals = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
+      const totals = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
       const sortedStats = Object.entries(stats).sort(([, a], [, b]) => b.OK - a.OK);
 
       sortedStats.forEach(([name, data]) => {
@@ -206,11 +204,16 @@
 
     function calculateDiagonalStats(data) {
       const diagStats = {};
-      data.forEach(({ name, diagonal, status }) => {
-        if (!['OK', 'NDF'].includes(status)) return;
+      data.forEach(({ name, serial, status }) => {
+        if (!name || !serial) return;
+        const diagCode = serial.slice(3,6); // после первых 3 букв
+        const diag = diagonalMap[diagCode];
+        if (!diag) return;
+
         if (!diagStats[name]) diagStats[name] = {};
-        if (!diagStats[name][diagonal]) diagStats[name][diagonal] = 0;
-        diagStats[name][diagonal]++;
+        // Считаем OK + NDF
+        if (!diagStats[name][diag]) diagStats[name][diag] = 0;
+        if (status === 'OK' || status === 'NDF') diagStats[name][diag]++;
       });
       return diagStats;
     }
@@ -224,31 +227,28 @@
       title.textContent = 'Diagonal Stats (OK + NDF)';
       container.appendChild(title);
 
+      const allDiagonals = Array.from(
+        new Set(Object.values(diagStats).flatMap(obj => Object.keys(obj)))
+      ).sort((a,b)=>Number(a)-Number(b));
+
       const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th>NAME</th>
-            <th>DIAGONAL</th>
-            <th>COUNT</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      `;
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d=>`<th>${d}</th>`).join('');
+      thead.appendChild(headRow);
+      table.appendChild(thead);
 
-      const tbody = table.querySelector('tbody');
-      Object.entries(diagStats).forEach(([name, diagonals]) => {
-        Object.entries(diagonals).forEach(([diag, count]) => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${name}</td>
-            <td>${diag}</td>
-            <td>${count}</td>
-          `;
-          tbody.appendChild(row);
+      const tbody = document.createElement('tbody');
+      Object.entries(diagStats).forEach(([name, diagonals])=>{
+        const row = document.createElement('tr');
+        let rowHTML = `<td>${name}</td>`;
+        allDiagonals.forEach(d=>{
+          rowHTML += `<td>${diagonals[d]||0}</td>`;
         });
+        row.innerHTML = rowHTML;
+        tbody.appendChild(row);
       });
-
+      table.appendChild(tbody);
       container.appendChild(table);
       document.body.appendChild(container);
     }
@@ -258,17 +258,15 @@
       const lastDate = getLastDate(combinedData);
       const lastDateStr = lastDate.toISOString().split('T')[0];
 
-      const filtered = combinedData.filter(record => {
-        const recDate = record.date?.split(' ')[0] || '';
-        return recDate === lastDateStr;
-      });
+      const filtered = combinedData.filter(r=> (r.date?.split(' ')[0]||'')===lastDateStr);
 
       const stats = calculateStats(filtered);
       displayCombinedStats(stats);
-      document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
 
       const diagStats = calculateDiagonalStats(filtered);
       displayDiagonalStats(diagStats);
+
+      document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
     }
 
     setInterval(updateStats, 25000);
