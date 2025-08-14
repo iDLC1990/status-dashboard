@@ -10,7 +10,6 @@
       color: #fff;
       font-family: Arial, sans-serif;
     }
-
     .header {
       display: flex;
       justify-content: space-between;
@@ -18,23 +17,19 @@
       padding: 20px 10%;
       background-color: #112;
     }
-
     .header h1 {
       margin: 0;
       color: #008080;
       font-size: 24px;
     }
-
     .date-info {
-      color: ##008080;
+      color: #008080; /* исправлено двойной # */
       font-size: 24px;
     }
-
     .table-container {
       width: 80%;
       margin: 24px auto;
     }
-
     .table-button {
       display: block;
       width: 100%;
@@ -50,32 +45,26 @@
       padding-left: 20px;
       margin-bottom: -1px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       background-color: #555;
       border-radius: 0 0 10px 10px;
     }
-
     table, th, td {
       border: 1px solid #fff;
     }
-
     th, td {
       padding: 10px;
       text-align: center;
     }
-
     th {
       font-weight: bold;
       font-size: 16px;
     }
-
     td {
       font-size: 16px;
     }
-
     .total-row {
       font-weight: bold;
       background-color: #333;
@@ -112,6 +101,25 @@
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
+    const diagonalMap = {
+      '860': 86, '850': 85, '750': 75, '700': 70, '650': 65, '580': 58, '575': 58,
+      '550': 55, '545': 55, '500': 50, '498': 50, '495': 50, '490': 50,
+      '438': 43, '435': 43, '430': 43, '428': 43, '425': 43, '420': 43,
+      '418': 43, '415': 43, '398': 43, '395': 43, '390': 43,
+      '348': 32, '345': 32, '340': 32, '328': 32, '325': 32, '320': 32,
+      '318': 32, '315': 32,
+      '278': 27, '275': 27, '270': 27,
+      '248': 24, '245': 24, '240': 24, '238': 24, '235': 24, '230': 24
+    };
+
+    function extractDiagonal(serial) {
+      if (!serial) return null;
+      const match = serial.substring(3).match(/^\d+/);
+      if (!match) return null;
+      const rawDiag = match[0];
+      return diagonalMap[rawDiag] || rawDiag;
+    }
+
     async function getData(sheetName) {
       const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
       const data = await response.json();
@@ -123,9 +131,10 @@
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
       const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
       return combined.map(row => ({
-        name: row[5],
+        date: row[0],
         status: row[4],
-        date: row[0]
+        name: row[5],
+        diagonal: extractDiagonal(row[2]) // row[2] — серийный номер
       }));
     }
 
@@ -141,14 +150,7 @@
       const stats = {};
       data.forEach(({ name, status }) => {
         if (!stats[name]) {
-          stats[name] = {
-            NDF: 0,
-            OK: 0,
-            WAITING: 0,
-            'SCRAP TTL': 0,
-            'SCRAP PNLA': 0,
-            total: 0
-          };
+          stats[name] = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
         }
         if (status === 'NDF') stats[name].NDF++;
         if (status === 'OK') stats[name].OK++;
@@ -164,15 +166,7 @@
       const tbody = document.querySelector('#combined-table tbody');
       tbody.innerHTML = '';
 
-      const totals = {
-        NDF: 0,
-        OK: 0,
-        WAITING: 0,
-        'SCRAP TTL': 0,
-        'SCRAP PNLA': 0,
-        total: 0
-      };
-
+      const totals = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
       const sortedStats = Object.entries(stats).sort(([, a], [, b]) => b.OK - a.OK);
 
       sortedStats.forEach(([name, data]) => {
@@ -210,6 +204,55 @@
       tbody.appendChild(totalRow);
     }
 
+    function calculateDiagonalStats(data) {
+      const diagStats = {};
+      data.forEach(({ name, diagonal, status }) => {
+        if (!['OK', 'NDF'].includes(status)) return;
+        if (!diagStats[name]) diagStats[name] = {};
+        if (!diagStats[name][diagonal]) diagStats[name][diagonal] = 0;
+        diagStats[name][diagonal]++;
+      });
+      return diagStats;
+    }
+
+    function displayDiagonalStats(diagStats) {
+      const container = document.createElement('div');
+      container.className = 'table-container';
+
+      const title = document.createElement('button');
+      title.className = 'table-button';
+      title.textContent = 'Diagonal Stats (OK + NDF)';
+      container.appendChild(title);
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>NAME</th>
+            <th>DIAGONAL</th>
+            <th>COUNT</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      const tbody = table.querySelector('tbody');
+      Object.entries(diagStats).forEach(([name, diagonals]) => {
+        Object.entries(diagonals).forEach(([diag, count]) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${name}</td>
+            <td>${diag}</td>
+            <td>${count}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      });
+
+      container.appendChild(table);
+      document.body.appendChild(container);
+    }
+
     async function updateStats() {
       const combinedData = await fetchData();
       const lastDate = getLastDate(combinedData);
@@ -223,11 +266,13 @@
       const stats = calculateStats(filtered);
       displayCombinedStats(stats);
       document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
+
+      const diagStats = calculateDiagonalStats(filtered);
+      displayDiagonalStats(diagStats);
     }
 
     setInterval(updateStats, 25000);
     updateStats();
-    
   </script>
 </body>
 </html>
