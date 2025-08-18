@@ -70,6 +70,10 @@
       background-color: #333;
       color: #008080;
     }
+    .sum-col {
+      background-color: #222;
+      color: #0ff;
+    }
   </style>
 </head>
 <body>
@@ -119,9 +123,15 @@
     }
 
     async function getData(sheetName) {
-      const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
-      const data = await response.json();
-      return data.values;
+      try {
+        const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
+        if (!response.ok) throw new Error("API request failed");
+        const data = await response.json();
+        return data.values || [];
+      } catch (err) {
+        console.error(`Ошибка загрузки ${sheetName}:`, err);
+        return [];
+      }
     }
 
     async function fetchData() {
@@ -130,7 +140,7 @@
       const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
       return combined.map(row => ({
         date: row[0],
-        serial: row[2], // Серийник во втором столбце
+        serial: row[2],
         status: row[4],
         name: row[5]
       }));
@@ -232,7 +242,7 @@
         diagTable = document.createElement('table');
         const thead = document.createElement('thead');
         const headRow = document.createElement('tr');
-        headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d => `<th>${d}</th>`).join('');
+        headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d => `<th>${d}</th>`).join('') + `<th class="sum-col">SUMA</th>`;
         thead.appendChild(headRow);
         diagTable.appendChild(thead);
 
@@ -250,7 +260,7 @@
         const thead = diagTable.querySelector('thead');
         thead.innerHTML = '';
         const headRow = document.createElement('tr');
-        headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d => `<th>${d}</th>`).join('');
+        headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d => `<th>${d}</th>`).join('') + `<th class="sum-col">SUMA</th>`;
         thead.appendChild(headRow);
       }
     }
@@ -266,12 +276,34 @@
       Object.entries(diagStats).forEach(([name, diagonals]) => {
         const row = document.createElement('tr');
         let rowHTML = `<td>${name}</td>`;
+        let rowSum = 0;
+
         allDiagonals.forEach(diag => {
-          rowHTML += `<td>${diagonals[diag] || 0}</td>`;
+          const val = diagonals[diag] || 0;
+          rowHTML += `<td>${val}</td>`;
+          rowSum += val;
         });
+
+        rowHTML += `<td class="sum-col"><b>${rowSum}</b></td>`;
         row.innerHTML = rowHTML;
         diagTbody.appendChild(row);
       });
+
+      // итоговая строка
+      const totalRow = document.createElement('tr');
+      totalRow.className = 'total-row';
+      let totalHTML = `<td>SUMA</td>`;
+      let grandTotal = 0;
+
+      allDiagonals.forEach(diag => {
+        const sum = Object.values(diagStats).reduce((acc, d) => acc + (d[diag] || 0), 0);
+        totalHTML += `<td>${sum}</td>`;
+        grandTotal += sum;
+      });
+
+      totalHTML += `<td class="sum-col">${grandTotal}</td>`;
+      totalRow.innerHTML = totalHTML;
+      diagTbody.appendChild(totalRow);
     }
 
     async function updateStats() {
