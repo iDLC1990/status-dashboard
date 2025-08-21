@@ -83,7 +83,7 @@
   </div>
 
   <div class="table-container">
-    <button class="table-button">FI Station Overview</button>
+    <button class="table-button" id="overview-toggle">FI Station Overview</button>
     <table id="combined-table">
       <thead>
         <tr>
@@ -109,7 +109,7 @@
     const diagonalMapPrefix = {
       'WH8': 55,
       'WC8': 32,
-      'WU0': 43,
+      'WU0': 44,
       'SQ1': 43,
       'WM5': 50,
       'WC7': 32,
@@ -349,6 +349,12 @@
       displayDiagonalStats(diagStats);
       document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
     }
+
+    // сворачивание верхней таблицы
+    document.getElementById('overview-toggle').addEventListener('click', () => {
+      const table = document.getElementById('combined-table');
+      table.style.display = table.style.display === 'none' ? 'table' : 'none';
+    });
 
     setInterval(updateStats, 25000);
     updateStats();
