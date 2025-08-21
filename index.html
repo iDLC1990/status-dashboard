@@ -105,7 +105,21 @@
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
-    const diagonalMap = {
+    // новые коды по первым трём символам
+    const diagonalMapPrefix = {
+      'WH8': 55,
+      'WC8': 32,
+      'WU0': 44,
+      'SQ1': 43,
+      'WM5': 50,
+      'WC7': 32,
+      'WP5': 65,
+      'WW1': 75,
+      'WM6': 50
+    };
+
+    // старые коды по 4–6 символам
+    const diagonalMapSuffix = {
       '860': 86, '850': 85, '750': 75, '700': 70, '650': 65, '580': 58, '575': 58,
       '550': 55, '545': 55, '500': 50, '498': 50, '495': 50, '490': 50,
       '438': 43, '435': 43, '430': 43, '428': 43, '425': 43, '420': 43,
@@ -118,8 +132,20 @@
 
     function extractDiagonal(serial) {
       if (!serial || serial.length < 6) return null;
-      const code = serial.substr(3, 3);
-      return diagonalMap[code] || null;
+
+      // проверяем первые 3 символа
+      const prefix = serial.substr(0, 3);
+      if (diagonalMapPrefix[prefix]) {
+        return diagonalMapPrefix[prefix];
+      }
+
+      // проверяем символы 4–6
+      const suffix = serial.substr(3, 3);
+      if (diagonalMapSuffix[suffix]) {
+        return diagonalMapSuffix[suffix];
+      }
+
+      return null;
     }
 
     async function getData(sheetName) {
@@ -236,7 +262,7 @@
 
         const title = document.createElement('button');
         title.className = 'table-button';
-        title.textContent = '.';
+        title.textContent = 'Диагонали';
         diagTableContainer.appendChild(title);
 
         diagTable = document.createElement('table');
