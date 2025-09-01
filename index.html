@@ -6,10 +6,25 @@
   <title>LCDR LIVE DATA</title>
   <style>
     body {
-      background-color: #000;
+      /* Фоновая картинка с GitHub */
+      background: url('https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/image/your-image.jpg') no-repeat center center fixed;
+      background-size: cover;
       color: #fff;
       font-family: Arial, sans-serif;
     }
+
+    /* Затемнение фона для читаемости текста */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: -1;
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -105,20 +120,11 @@
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
-    // новые коды по первым трём символам
     const diagonalMapPrefix = {
-      'WH8': 55,
-      'WC8': 32,
-      'WU0': 43,
-      'SQ1': 43,
-      'WM5': 50,
-      'WC7': 32,
-      'WP5': 65,
-      'WW1': 75,
-      'WM6': 50
+      'WH8': 55, 'WC8': 32, 'WU0': 43, 'SQ1': 43, 'WM5': 50,
+      'WC7': 32, 'WP5': 65, 'WW1': 75, 'WM6': 50
     };
 
-    // старые коды по 4–6 символам
     const diagonalMapSuffix = {
       '860': 86, '850': 85, '750': 75, '700': 70, '650': 65, '580': 58, '575': 58,
       '550': 55, '545': 55, '500': 50, '498': 50, '495': 50, '490': 50,
@@ -132,19 +138,10 @@
 
     function extractDiagonal(serial) {
       if (!serial || serial.length < 6) return null;
-
-      // проверяем первые 3 символа
       const prefix = serial.substr(0, 3);
-      if (diagonalMapPrefix[prefix]) {
-        return diagonalMapPrefix[prefix];
-      }
-
-      // проверяем символы 4–6
+      if (diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
       const suffix = serial.substr(3, 3);
-      if (diagonalMapSuffix[suffix]) {
-        return diagonalMapSuffix[suffix];
-      }
-
+      if (diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
       return null;
     }
 
@@ -183,11 +180,7 @@
     function calculateStats(data) {
       const stats = {};
       data.forEach(({ name, status }) => {
-        if (!stats[name]) {
-          stats[name] = {
-            NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0
-          };
-        }
+        if (!stats[name]) stats[name] = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
         if (status === 'NDF') stats[name].NDF++;
         if (status === 'OK') stats[name].OK++;
         if (status === 'WAITING') stats[name].WAITING++;
@@ -219,15 +212,7 @@
 
       sortedStats.forEach(([name, data]) => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${name}</td>
-          <td>${data.NDF}</td>
-          <td>${data.OK}</td>
-          <td>${data.WAITING}</td>
-          <td>${data['SCRAP TTL']}</td>
-          <td>${data['SCRAP PNLA']}</td>
-          <td>${data.total}</td>
-        `;
+        row.innerHTML = `<td>${name}</td><td>${data.NDF}</td><td>${data.OK}</td><td>${data.WAITING}</td><td>${data['SCRAP TTL']}</td><td>${data['SCRAP PNLA']}</td><td>${data.total}</td>`;
         tbody.appendChild(row);
 
         totals.NDF += data.NDF;
@@ -240,15 +225,7 @@
 
       const totalRow = document.createElement('tr');
       totalRow.className = 'total-row';
-      totalRow.innerHTML = `
-        <td>SUMA</td>
-        <td>${totals.NDF}</td>
-        <td>${totals.OK}</td>
-        <td>${totals.WAITING}</td>
-        <td>${totals['SCRAP TTL']}</td>
-        <td>${totals['SCRAP PNLA']}</td>
-        <td>${totals.total}</td>
-      `;
+      totalRow.innerHTML = `<td>SUMA</td><td>${totals.NDF}</td><td>${totals.OK}</td><td>${totals.WAITING}</td><td>${totals['SCRAP TTL']}</td><td>${totals['SCRAP PNLA']}</td><td>${totals.total}</td>`;
       tbody.appendChild(totalRow);
     }
 
@@ -278,7 +255,6 @@
         diagTableContainer.appendChild(diagTable);
         document.body.appendChild(diagTableContainer);
 
-        // сворачивание
         title.addEventListener('click', () => {
           diagTable.style.display = diagTable.style.display === 'none' ? 'table' : 'none';
         });
@@ -292,10 +268,7 @@
     }
 
     function displayDiagonalStats(diagStats) {
-      const allDiagonals = Array.from(
-        new Set(Object.values(diagStats).flatMap(obj => Object.keys(obj)))
-      ).sort((a, b) => Number(a) - Number(b));
-
+      const allDiagonals = Array.from(new Set(Object.values(diagStats).flatMap(obj => Object.keys(obj)))).sort((a, b) => Number(a) - Number(b));
       initDiagonalTable(allDiagonals);
       diagTbody.innerHTML = '';
 
@@ -315,7 +288,6 @@
         diagTbody.appendChild(row);
       });
 
-      // итоговая строка
       const totalRow = document.createElement('tr');
       totalRow.className = 'total-row';
       let totalHTML = `<td>SUMA</td>`;
@@ -350,7 +322,6 @@
       document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
     }
 
-    // сворачивание верхней таблицы
     document.getElementById('overview-toggle').addEventListener('click', () => {
       const table = document.getElementById('combined-table');
       table.style.display = table.style.display === 'none' ? 'table' : 'none';
