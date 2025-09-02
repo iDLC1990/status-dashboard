@@ -87,12 +87,36 @@
       background-color: #222;
       color: #0ff;
     }
+    /* Поиск */
+    #search {
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin: 20px auto;
+      display: block;
+    }
+    #search-result {
+      margin-top: 15px;
+      color: #0ff;
+      font-size: 18px;
+      padding: 10px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>LCDR LIVE DATA 2025</h1>
     <div class="date-info" id="date-info">DATE: --</div>
+  </div>
+
+  <!-- Поле поиска -->
+  <div class="table-container">
+    <input type="text" id="search" placeholder="Введите или сканируйте серийный номер...">
+    <div id="search-result"></div>
   </div>
 
   <div class="table-container">
@@ -227,80 +251,50 @@
       tbody.appendChild(totalRow);
     }
 
-    let diagTableContainer = null;
-    let diagTable = null;
-    let diagTbody = null;
-    function initDiagonalTable(allDiagonals) {
-      if (!diagTableContainer) {
-        diagTableContainer = document.createElement('div');
-        diagTableContainer.className = 'table-container';
+    // 🔎 Поиск по серийному номеру
+    async function searchSerial(serial) {
+      const sheet1Data = await getData('FI Station KOVALCHYK Y.');
+      const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
+      const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
 
-        const title = document.createElement('button');
-        title.className = 'table-button';
-        title.textContent = 'Диагонали';
-        diagTableContainer.appendChild(title);
+      const result = combined.find(row => row[2] === serial);
 
-        diagTable = document.createElement('table');
-        const thead = document.createElement('thead');
-        const headRow = document.createElement('tr');
-        headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d => `<th>${d}</th>`).join('') + `<th class="sum-col">SUMA</th>`;
-        thead.appendChild(headRow);
-        diagTable.appendChild(thead);
-
-        diagTbody = document.createElement('tbody');
-        diagTable.appendChild(diagTbody);
-
-        diagTableContainer.appendChild(diagTable);
-        document.body.appendChild(diagTableContainer);
-
-        title.addEventListener('click', () => {
-          diagTable.style.display = diagTable.style.display === 'none' ? 'table' : 'none';
-        });
-      } else {
-        const thead = diagTable.querySelector('thead');
-        thead.innerHTML = '';
-        const headRow = document.createElement('tr');
-        headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d => `<th>${d}</th>`).join('') + `<th class="sum-col">SUMA</th>`;
-        thead.appendChild(headRow);
+      if (result) {
+        return {
+          date: result[0] || "--",
+          status: result[4] || "--",
+          nameF: result[5] || "--",
+          nameG: result[6] || "--",
+          info: result[10] || "--"
+        };
       }
+      return null;
     }
 
-    function displayDiagonalStats(diagStats) {
-      const allDiagonals = Array.from(new Set(Object.values(diagStats).flatMap(obj => Object.keys(obj)))).sort((a, b) => Number(a) - Number(b));
-      initDiagonalTable(allDiagonals);
-      diagTbody.innerHTML = '';
+    document.getElementById('search').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        const serial = e.target.value.trim();
+        const output = document.getElementById('search-result');
 
-      Object.entries(diagStats).forEach(([name, diagonals]) => {
-        const row = document.createElement('tr');
-        let rowHTML = `<td>${name}</td>`;
-        let rowSum = 0;
+        if (!serial) {
+          output.textContent = "Введите серийный номер!";
+          return;
+        }
 
-        allDiagonals.forEach(diag => {
-          const val = diagonals[diag] || 0;
-          rowHTML += `<td>${val}</td>`;
-          rowSum += val;
-        });
-
-        rowHTML += `<td class="sum-col"><b>${rowSum}</b></td>`;
-        row.innerHTML = rowHTML;
-        diagTbody.appendChild(row);
-      });
-
-      const totalRow = document.createElement('tr');
-      totalRow.className = 'total-row';
-      let totalHTML = `<td>SUMA</td>`;
-      let grandTotal = 0;
-
-      allDiagonals.forEach(diag => {
-        const sum = Object.values(diagStats).reduce((acc, d) => acc + (d[diag] || 0), 0);
-        totalHTML += `<td>${sum}</td>`;
-        grandTotal += sum;
-      });
-
-      totalHTML += `<td class="sum-col">${grandTotal}</td>`;
-      totalRow.innerHTML = totalHTML;
-      diagTbody.appendChild(totalRow);
-    }
+        const data = await searchSerial(serial);
+        if (data) {
+          output.innerHTML = `
+            <b>Дата:</b> ${data.date}<br>
+            <b>Статус:</b> ${data.status}<br>
+            <b>Фамилия F:</b> ${data.nameF}<br>
+            <b>Фамилия G:</b> ${data.nameG}<br>
+            <b>Инфо:</b> ${data.info}
+          `;
+        } else {
+          output.textContent = "Серийный номер не найден!";
+        }
+      }
+    });
 
     async function updateStats() {
       const combinedData = await fetchData();
@@ -316,7 +310,6 @@
       const diagStats = calculateDiagonalStats(filtered);
 
       displayCombinedStats(stats);
-      displayDiagonalStats(diagStats);
       document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
     }
 
