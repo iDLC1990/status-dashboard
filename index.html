@@ -115,7 +115,7 @@
 
   <!-- Поле поиска -->
   <div class="table-container">
-    <input type="text" id="search" placeholder="Введите или сканируйте серийный номер...">
+    <input type="text" id="search" placeholder="Info  zielony plik">
     <div id="search-result"></div>
   </div>
 
@@ -284,11 +284,11 @@
         const data = await searchSerial(serial);
         if (data) {
           output.innerHTML = `
-            <b>Дата:</b> ${data.date}<br>
-            <b>Статус:</b> ${data.status}<br>
-            <b>Фамилия F:</b> ${data.nameF}<br>
-            <b>Фамилия G:</b> ${data.nameG}<br>
-            <b>Инфо:</b> ${data.info}
+            <b>Data:</b> ${data.date}<br>
+            <b>Status: </b> ${data.status}<br>
+            <b>Naprawiacz: </b> ${data.nameF}<br>
+            <b>Finalna:</b> ${data.nameG}<br>
+            <b>Info:</b> ${data.info}
           `;
         } else {
           output.textContent = "Серийный номер не найден!";
