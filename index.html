@@ -127,6 +127,7 @@
     <div id="search-result"></div>
   </div>
 
+  <!-- Верхняя таблица -->
   <div class="table-container">
     <button class="table-button" id="overview-toggle">FI Station Overview</button>
     <table id="combined-table">
@@ -149,6 +150,31 @@
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
+
+    const diagonalMapPrefix = {
+      'WH8': 55, 'WC8': 32, 'WU0': 43, 'SQ1': 43, 'WM5': 50,
+      'WC7': 32, 'WP5': 65, 'WW1': 75, 'WM6': 50
+    };
+
+    const diagonalMapSuffix = {
+      '860': 86, '850': 85, '750': 75, '700': 70, '650': 65, '580': 58, '575': 58,
+      '550': 55, '545': 55, '500': 50, '498': 50, '495': 50, '490': 50,
+      '438': 43, '435': 43, '430': 43, '428': 43, '425': 43, '420': 43,
+      '418': 43, '415': 43, '398': 43, '395': 43, '390': 43,
+      '348': 32, '345': 32, '340': 32, '328': 32, '325': 32, '320': 32,
+      '318': 32, '315': 32,
+      '278': 27, '275': 27, '270': 27,
+      '248': 24, '245': 24, '240': 24, '238': 24, '235': 24, '230': 24
+    };
+
+    function extractDiagonal(serial) {
+      if (!serial || serial.length < 6) return null;
+      const prefix = serial.substr(0, 3);
+      if (diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
+      const suffix = serial.substr(3, 3);
+      if (diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
+      return null;
+    }
 
     async function getData(sheetName) {
       try {
@@ -196,6 +222,18 @@
       return stats;
     }
 
+    function calculateDiagonalStats(data) {
+      const diagStats = {};
+      data.forEach(({ name, serial, status }) => {
+        if (status !== 'OK' && status !== 'NDF') return;
+        const diag = extractDiagonal(serial);
+        if (!diag) return;
+        if (!diagStats[name]) diagStats[name] = {};
+        diagStats[name][diag] = (diagStats[name][diag] || 0) + 1;
+      });
+      return diagStats;
+    }
+
     function displayCombinedStats(stats) {
       const tbody = document.querySelector('#combined-table tbody');
       tbody.innerHTML = '';
@@ -222,7 +260,82 @@
       tbody.appendChild(totalRow);
     }
 
-    // 🔎 Поиск по серийному номеру (только последние 4 совпадения)
+    let diagTableContainer = null;
+    let diagTable = null;
+    let diagTbody = null;
+    function initDiagonalTable(allDiagonals) {
+      if (!diagTableContainer) {
+        diagTableContainer = document.createElement('div');
+        diagTableContainer.className = 'table-container';
+
+        const title = document.createElement('button');
+        title.className = 'table-button';
+        title.textContent = 'Диагонали';
+        diagTableContainer.appendChild(title);
+
+        diagTable = document.createElement('table');
+        const thead = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d => `<th>${d}</th>`).join('') + `<th class="sum-col">SUMA</th>`;
+        thead.appendChild(headRow);
+        diagTable.appendChild(thead);
+
+        diagTbody = document.createElement('tbody');
+        diagTable.appendChild(diagTbody);
+
+        diagTableContainer.appendChild(diagTable);
+        document.body.appendChild(diagTableContainer);
+
+        title.addEventListener('click', () => {
+          diagTable.style.display = diagTable.style.display === 'none' ? 'table' : 'none';
+        });
+      } else {
+        const thead = diagTable.querySelector('thead');
+        thead.innerHTML = '';
+        const headRow = document.createElement('tr');
+        headRow.innerHTML = `<th>NAME</th>` + allDiagonals.map(d => `<th>${d}</th>`).join('') + `<th class="sum-col">SUMA</th>`;
+        thead.appendChild(headRow);
+      }
+    }
+
+    function displayDiagonalStats(diagStats) {
+      const allDiagonals = Array.from(new Set(Object.values(diagStats).flatMap(obj => Object.keys(obj)))).sort((a, b) => Number(a) - Number(b));
+      initDiagonalTable(allDiagonals);
+      diagTbody.innerHTML = '';
+
+      Object.entries(diagStats).forEach(([name, diagonals]) => {
+        const row = document.createElement('tr');
+        let rowHTML = `<td>${name}</td>`;
+        let rowSum = 0;
+
+        allDiagonals.forEach(diag => {
+          const val = diagonals[diag] || 0;
+          rowHTML += `<td>${val}</td>`;
+          rowSum += val;
+        });
+
+        rowHTML += `<td class="sum-col"><b>${rowSum}</b></td>`;
+        row.innerHTML = rowHTML;
+        diagTbody.appendChild(row);
+      });
+
+      const totalRow = document.createElement('tr');
+      totalRow.className = 'total-row';
+      let totalHTML = `<td>SUMA</td>`;
+      let grandTotal = 0;
+
+      allDiagonals.forEach(diag => {
+        const sum = Object.values(diagStats).reduce((acc, d) => acc + (d[diag] || 0), 0);
+        totalHTML += `<td>${sum}</td>`;
+        grandTotal += sum;
+      });
+
+      totalHTML += `<td class="sum-col">${grandTotal}</td>`;
+      totalRow.innerHTML = totalHTML;
+      diagTbody.appendChild(totalRow);
+    }
+
+    // 🔎 Поиск по серийному номеру (4 последних совпадения)
     async function searchSerial(serial) {
       const sheet1Data = await getData('FI Station KOVALCHYK Y.');
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
@@ -238,14 +351,12 @@
         info: row[10] || "--"
       }));
 
-      // сортировка по дате (новые сверху)
       results.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-      // только 4 последних
       return results.slice(0, 4);
     }
 
-    // Поиск по Enter
+    // Обработка Enter в поиске
     document.getElementById('search').addEventListener('keypress', async (e) => {
       if (e.key === 'Enter') {
         const serial = e.target.value.trim();
@@ -301,7 +412,10 @@
       });
 
       const stats = calculateStats(filtered);
+      const diagStats = calculateDiagonalStats(filtered);
+
       displayCombinedStats(stats);
+      displayDiagonalStats(diagStats);
       document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
     }
 
