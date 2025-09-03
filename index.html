@@ -121,13 +121,13 @@
     <div class="date-info" id="date-info">DATE: --</div>
   </div>
 
-  <!-- Поле поиска -->
+  
   <div class="table-container">
-    <input type="text" id="search" placeholder="Введите или сканируйте серийный номер... (Enter)">
+    <input type="text" id="search" placeholder="Podaj SN (Enter)">
     <div id="search-result"></div>
   </div>
 
-  <!-- Верхняя таблица -->
+  
   <div class="table-container">
     <button class="table-button" id="overview-toggle">FI Station Overview</button>
     <table id="combined-table">
@@ -270,7 +270,7 @@
 
         const title = document.createElement('button');
         title.className = 'table-button';
-        title.textContent = 'Диагонали';
+        title.textContent = 'Cali';
         diagTableContainer.appendChild(title);
 
         diagTable = document.createElement('table');
@@ -335,7 +335,7 @@
       diagTbody.appendChild(totalRow);
     }
 
-    // 🔎 Поиск по серийному номеру (4 последних совпадения)
+    
     async function searchSerial(serial) {
       const sheet1Data = await getData('FI Station KOVALCHYK Y.');
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
@@ -356,14 +356,14 @@
       return results.slice(0, 4);
     }
 
-    // Обработка Enter в поиске
+    
     document.getElementById('search').addEventListener('keypress', async (e) => {
       if (e.key === 'Enter') {
         const serial = e.target.value.trim();
         const output = document.getElementById('search-result');
 
         if (!serial) {
-          output.innerHTML = "<p style='color:red'>Введите серийный номер!</p>";
+          output.innerHTML = "<p style='color:red'>Podaj SN!</p>";
           return;
         }
 
@@ -383,11 +383,11 @@
             <table>
               <thead>
                 <tr>
-                  <th>Дата</th>
-                  <th>Статус</th>
-                  <th>Фамилия F</th>
-                  <th>Фамилия G</th>
-                  <th>Инфо</th>
+                  <th>Data</th>
+                  <th>Status</th>
+                  <th>NAPRAWIACZ</th>
+                  <th>FINALNA</th>
+                  <th>INFO</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,7 +396,7 @@
             </table>
           `;
         } else {
-          output.innerHTML = "<p style='color:yellow'>Серийный номер не найден!</p>";
+          output.innerHTML = "<p style='color:yellow'>Brak info!</p>";
         }
       }
     });
