@@ -123,7 +123,7 @@
 
   <!-- Поле поиска -->
   <div class="table-container">
-    <input type="text" id="search" placeholder="PODAJ SN...">
+    <input type="text" id="search" placeholder="Введите или сканируйте серийный номер... (Enter)">
     <div id="search-result"></div>
   </div>
 
@@ -222,63 +222,71 @@
       tbody.appendChild(totalRow);
     }
 
-    // 🔎 Поиск по серийному номеру (все совпадения)
+    // 🔎 Поиск по серийному номеру (только последние 4 совпадения)
     async function searchSerial(serial) {
       const sheet1Data = await getData('FI Station KOVALCHYK Y.');
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
       const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
 
-      const results = combined.filter(row => row[2] && row[2].includes(serial));
+      let results = combined.filter(row => row[2] === serial);
 
-      return results.map(row => ({
+      results = results.map(row => ({
         date: row[0] || "--",
         status: row[4] || "--",
         nameF: row[5] || "--",
         nameG: row[6] || "--",
         info: row[10] || "--"
       }));
+
+      // сортировка по дате (новые сверху)
+      results.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      // только 4 последних
+      return results.slice(0, 4);
     }
 
-    // Автоматический поиск без Enter
-    document.getElementById('search').addEventListener('input', async (e) => {
-      const serial = e.target.value.trim();
-      const output = document.getElementById('search-result');
+    // Поиск по Enter
+    document.getElementById('search').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        const serial = e.target.value.trim();
+        const output = document.getElementById('search-result');
 
-      if (serial.length < 3) { 
-        output.innerHTML = ""; // очищаем если меньше 3 символов
-        return;
-      }
+        if (!serial) {
+          output.innerHTML = "<p style='color:red'>Введите серийный номер!</p>";
+          return;
+        }
 
-      const data = await searchSerial(serial);
-      if (data.length > 0) {
-        let rows = data.map(d => `
-          <tr>
-            <td>${d.date}</td>
-            <td>${d.status}</td>
-            <td>${d.nameF}</td>
-            <td>${d.nameG}</td>
-            <td>${d.info}</td>
-          </tr>
-        `).join('');
+        const data = await searchSerial(serial);
+        if (data.length > 0) {
+          let rows = data.map(d => `
+            <tr>
+              <td>${d.date}</td>
+              <td>${d.status}</td>
+              <td>${d.nameF}</td>
+              <td>${d.nameG}</td>
+              <td>${d.info}</td>
+            </tr>
+          `).join('');
 
-        output.innerHTML = `
-          <table>
-            <thead>
-              <tr>
-                <th>DATA</th>
-                <th>STATUS</th>
-                <th>NAPRAWIACZ </th>
-                <th>FINALNA</th>
-                <th>INFO</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        `;
-      } else {
-        output.innerHTML = "<p style='color:yellow'>Серийный номер не найден!</p>";
+          output.innerHTML = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Статус</th>
+                  <th>Фамилия F</th>
+                  <th>Фамилия G</th>
+                  <th>Инфо</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          `;
+        } else {
+          output.innerHTML = "<p style='color:yellow'>Серийный номер не найден!</p>";
+        }
       }
     });
 
