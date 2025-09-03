@@ -87,6 +87,7 @@
       background-color: #222;
       color: #0ff;
     }
+
     /* Поиск */
     #search {
       width: 80%;
@@ -99,11 +100,18 @@
     }
     #search-result {
       margin-top: 15px;
+    }
+    #search-result table {
+      margin-top: 10px;
+      border: 2px solid #0ff;
+      background-color: #333;
+    }
+    #search-result th {
+      background-color: #008080;
+      color: #000;
+    }
+    #search-result td {
       color: #0ff;
-      font-size: 18px;
-      padding: 10px;
-      background: rgba(0,0,0,0.6);
-      border-radius: 8px;
     }
   </style>
 </head>
@@ -115,7 +123,7 @@
 
   <!-- Поле поиска -->
   <div class="table-container">
-    <input type="text" id="search" placeholder="Info  zielony plik">
+    <input type="text" id="search" placeholder="PODAJ SN...">
     <div id="search-result"></div>
   </div>
 
@@ -141,31 +149,6 @@
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
-
-    const diagonalMapPrefix = {
-      'WH8': 55, 'WC8': 32, 'WU0': 43, 'SQ1': 43, 'WM5': 50,
-      'WC7': 32, 'WP5': 65, 'WW1': 75, 'WM6': 50
-    };
-
-    const diagonalMapSuffix = {
-      '860': 86, '850': 85, '750': 75, '700': 70, '650': 65, '580': 58, '575': 58,
-      '550': 55, '545': 55, '500': 50, '498': 50, '495': 50, '490': 50,
-      '438': 43, '435': 43, '430': 43, '428': 43, '425': 43, '420': 43,
-      '418': 43, '415': 43, '398': 43, '395': 43, '390': 43,
-      '348': 32, '345': 32, '340': 32, '328': 32, '325': 32, '320': 32,
-      '318': 32, '315': 32,
-      '278': 27, '275': 27, '270': 27,
-      '248': 24, '245': 24, '240': 24, '238': 24, '235': 24, '230': 24
-    };
-
-    function extractDiagonal(serial) {
-      if (!serial || serial.length < 6) return null;
-      const prefix = serial.substr(0, 3);
-      if (diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
-      const suffix = serial.substr(3, 3);
-      if (diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
-      return null;
-    }
 
     async function getData(sheetName) {
       try {
@@ -213,18 +196,6 @@
       return stats;
     }
 
-    function calculateDiagonalStats(data) {
-      const diagStats = {};
-      data.forEach(({ name, serial, status }) => {
-        if (status !== 'OK' && status !== 'NDF') return;
-        const diag = extractDiagonal(serial);
-        if (!diag) return;
-        if (!diagStats[name]) diagStats[name] = {};
-        diagStats[name][diag] = (diagStats[name][diag] || 0) + 1;
-      });
-      return diagStats;
-    }
-
     function displayCombinedStats(stats) {
       const tbody = document.querySelector('#combined-table tbody');
       tbody.innerHTML = '';
@@ -251,48 +222,63 @@
       tbody.appendChild(totalRow);
     }
 
-    // 🔎 Поиск по серийному номеру
+    // 🔎 Поиск по серийному номеру (все совпадения)
     async function searchSerial(serial) {
       const sheet1Data = await getData('FI Station KOVALCHYK Y.');
       const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
       const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
 
-      const result = combined.find(row => row[2] === serial);
+      const results = combined.filter(row => row[2] && row[2].includes(serial));
 
-      if (result) {
-        return {
-          date: result[0] || "--",
-          status: result[4] || "--",
-          nameF: result[5] || "--",
-          nameG: result[6] || "--",
-          info: result[10] || "--"
-        };
-      }
-      return null;
+      return results.map(row => ({
+        date: row[0] || "--",
+        status: row[4] || "--",
+        nameF: row[5] || "--",
+        nameG: row[6] || "--",
+        info: row[10] || "--"
+      }));
     }
 
-    document.getElementById('search').addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter') {
-        const serial = e.target.value.trim();
-        const output = document.getElementById('search-result');
+    // Автоматический поиск без Enter
+    document.getElementById('search').addEventListener('input', async (e) => {
+      const serial = e.target.value.trim();
+      const output = document.getElementById('search-result');
 
-        if (!serial) {
-          output.textContent = "Brak info";
-          return;
-        }
+      if (serial.length < 3) { 
+        output.innerHTML = ""; // очищаем если меньше 3 символов
+        return;
+      }
 
-        const data = await searchSerial(serial);
-        if (data) {
-          output.innerHTML = `
-            <b>Data:</b> ${data.date}<br>
-            <b>Status: </b> ${data.status}<br>
-            <b>Naprawiacz: </b> ${data.nameF}<br>
-            <b>Finalna:</b> ${data.nameG}<br>
-            <b>Info:</b> ${data.info}
-          `;
-        } else {
-          output.textContent = "Серийный номер не найден!";
-        }
+      const data = await searchSerial(serial);
+      if (data.length > 0) {
+        let rows = data.map(d => `
+          <tr>
+            <td>${d.date}</td>
+            <td>${d.status}</td>
+            <td>${d.nameF}</td>
+            <td>${d.nameG}</td>
+            <td>${d.info}</td>
+          </tr>
+        `).join('');
+
+        output.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>DATA</th>
+                <th>STATUS</th>
+                <th>NAPRAWIACZ </th>
+                <th>FINALNA</th>
+                <th>INFO</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        `;
+      } else {
+        output.innerHTML = "<p style='color:yellow'>Серийный номер не найден!</p>";
       }
     });
 
@@ -307,8 +293,6 @@
       });
 
       const stats = calculateStats(filtered);
-      const diagStats = calculateDiagonalStats(filtered);
-
       displayCombinedStats(stats);
       document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
     }
