@@ -10,11 +10,11 @@ body::before { content:""; position: fixed; top:0; left:0; width:100%; height:10
 .header { display:flex; justify-content:space-between; align-items:center; padding:20px 10%; background-color: rgba(17,17,17,0.7); }
 .header h1 { margin:0; color:#008080; font-size:24px; }
 .date-info { color:#008080; font-size:24px; }
-.table-container { width:80%; margin:24px auto; }
-.table-header { display:flex; align-items:center; justify-content:space-between; background-color:#008080; border-radius:10px 10px 0 0; padding:8px 16px; }
+.table-container { width:80%; margin:24px auto; border:2px solid #008080; border-radius:10px; overflow:hidden; }
+.table-header { display:flex; align-items:center; justify-content:space-between; background-color:#008080; padding:8px 16px; }
 .table-header span { font-weight:bold; font-size:18px; color:#000; }
 .table-header button { background:none; border:none; font-size:20px; cursor:pointer; color:#000; }
-table { width:100%; border-collapse:collapse; background-color:#555; border-radius:0 0 10px 10px; }
+table { width:100%; border-collapse:collapse; background-color:#555; }
 table, th, td { border:1px solid #fff; }
 th, td { padding:10px; text-align:center; }
 th { font-weight:bold; font-size:16px; }
@@ -48,7 +48,8 @@ td { font-size:16px; cursor:pointer; }
   <div id="search-result"></div>
 </div>
 
-<div class="table-container">
+<!-- FI Station Overview -->
+<div class="table-container" id="overview-block">
   <div class="table-header">
     <span>FI Station Overview</span>
     <button id="overview-hide">👁</button>
@@ -63,7 +64,8 @@ td { font-size:16px; cursor:pointer; }
   </table>
 </div>
 
-<div class="table-container" id="diag-container">
+<!-- FI Station Diagonals -->
+<div class="table-container" id="diag-block">
   <div class="table-header">
     <span>FI Station Diagonals</span>
     <button id="diag-hide">👁</button>
@@ -213,19 +215,17 @@ document.getElementById('search').addEventListener('keypress',async(e)=>{
   }
 });
 
-// Hide/Show таблиц
-const overviewHideBtn=document.getElementById('overview-hide');
-overviewHideBtn.addEventListener('click',()=>{
-  const table=document.getElementById('combined-table');
-  if(table.style.display==='none'){ table.style.display='table'; overviewHideBtn.textContent='👁'; }
-  else { table.style.display='none'; overviewHideBtn.textContent='🚫'; }
+// Hide/Show блоков
+document.getElementById('overview-hide').addEventListener('click',()=>{
+  const block=document.getElementById('overview-block');
+  if(block.style.display==='none'){ block.style.display='block'; }
+  else { block.style.display='none'; }
 });
 
-const diagHideBtn=document.getElementById('diag-hide');
-diagHideBtn.addEventListener('click',()=>{
-  const table=document.getElementById('diag-table');
-  if(table.style.display==='none'){ table.style.display='table'; diagHideBtn.textContent='👁'; }
-  else { table.style.display='none'; diagHideBtn.textContent='🚫'; }
+document.getElementById('diag-hide').addEventListener('click',()=>{
+  const block=document.getElementById('diag-block');
+  if(block.style.display==='none'){ block.style.display='block'; }
+  else { block.style.display='none'; }
 });
 
 updateStats();
