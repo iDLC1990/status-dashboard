@@ -66,7 +66,6 @@ td { font-size:16px; cursor:pointer; }
   </table>
 </div>
 
-<!-- Модалка -->
 <div id="modal">
   <div id="modal-content">
     <button id="modal-close">Закрыть</button>
@@ -75,44 +74,39 @@ td { font-size:16px; cursor:pointer; }
 </div>
 
 <script>
-const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
-const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
-const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
+const apiKey='AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
+const sheetId='10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
+const sheetURL=`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 let combinedDataCache=[];
 
-// Диагонали
-const diagonalMapPrefix = { 'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50 };
-const diagonalMapSuffix = { '860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24 };
+const diagonalMapPrefix={ 'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50 };
+const diagonalMapSuffix={ '860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24};
 
 function extractDiagonal(serial){
   if(!serial || serial.length<6) return null;
-  const prefix = serial.substr(0,3);
-  if(diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
-  const suffix = serial.substr(3,3);
-  if(diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
+  const prefix=serial.substr(0,3); if(diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
+  const suffix=serial.substr(3,3); if(diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
   return null;
 }
 
-// Получение данных
 async function getData(sheetName){
   try{
-    const res = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
+    const res=await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
     if(!res.ok) throw new Error("Ошибка API");
-    const data = await res.json();
-    return data.values || [];
-  } catch(err){ console.error(err); return []; }
+    const data=await res.json();
+    return data.values||[];
+  }catch(err){ console.error(err); return []; }
 }
 
 async function fetchAndCacheData(){
-  const sheet1 = await getData('FI Station KOVALCHYK Y.');
-  const sheet2 = await getData('FI Station 2 ULANOVYCH.R');
-  combinedDataCache = [...sheet1.slice(1),...sheet2.slice(1)].map(r=>({ date:r[0]||"", serial:r[2]||"", status:r[4]||"", name:r[5]||"" }));
+  const sheet1=await getData('FI Station KOVALCHYK Y.');
+  const sheet2=await getData('FI Station 2 ULANOVYCH.R');
+  combinedDataCache=[...sheet1.slice(1),...sheet2.slice(1)].map(r=>({ date:r[0]||"", serial:r[2]||"", status:r[4]||"", name:r[5]||"" }));
   return combinedDataCache;
 }
 
-// Последняя дата
 function getLastDate(data){
-  const dates = data.map(r=>{ const d = r.date ? new Date(r.date.split(' ')[0]) : null; return d && !isNaN(d)?d:null; }).filter(d=>d!==null);
+  const dates=data.map(r=>{ const d=r.date ? new Date(r.date.split(' ')[0]) : null; return d && !isNaN(d)?d:null; }).filter(d=>d!==null);
   return dates.length===0 ? new Date() : new Date(Math.max(...dates));
 }
 
@@ -123,13 +117,13 @@ document.getElementById('modal-close').addEventListener('click',()=>modal.classL
 modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('show'); });
 
 function openModal(name){
-  const lastDateStr = document.getElementById('date-info').textContent.split(' ')[1];
-  const records = combinedDataCache.filter(r=>r.name===name && r.date.split(' ')[0]===lastDateStr);
+  const lastDateStr=document.getElementById('date-info').textContent.split(' ')[1];
+  const records=combinedDataCache.filter(r=>r.name===name && r.date.split(' ')[0]===lastDateStr);
   if(records.length===0){ modalBody.innerHTML="<p>Нет данных за текущий день</p>"; }
   else{
     let html='<table><tr><th>Serial</th><th>Status</th></tr>';
     records.forEach(r=>html+=`<tr><td>${r.serial}</td><td>${r.status}</td></tr>`);
-    html+='</table>'; modalBody.innerHTML = html;
+    html+='</table>'; modalBody.innerHTML=html;
   }
   modal.classList.add('show');
 }
@@ -153,30 +147,30 @@ function displayCombinedStats(filtered){
   }
 }
 
-// Нижняя таблица
+// Нижняя таблица диагоналей
 function displayDiagonalStats(filtered){
   const diagStats={};
   filtered.forEach(({name,serial,status})=>{
     if(status!=="OK" && status!=="NDF") return;
-    const diag = extractDiagonal(serial); if(!diag) return;
+    const diag=extractDiagonal(serial); if(!diag) return;
     if(!diagStats[name]) diagStats[name]={};
-    diagStats[name][diag] = (diagStats[name][diag]||0)+1;
+    diagStats[name][diag]=(diagStats[name][diag]||0)+1;
   });
   const tbody=document.querySelector('#diag-table tbody');
   const thead=document.querySelector('#diag-table thead');
   const allDiagonals=Array.from(new Set(Object.values(diagStats).flatMap(o=>Object.keys(o)))).sort((a,b)=>a-b);
-  thead.innerHTML = `<tr><th>NAME</th>${allDiagonals.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+  thead.innerHTML=`<tr><th>NAME</th>${allDiagonals.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
   tbody.innerHTML="";
   Object.entries(diagStats).forEach(([name,diags])=>{
-    const row=document.createElement('tr');
-    let sum=0; const tdName=document.createElement('td'); tdName.textContent=name; row.appendChild(tdName);
+    const row=document.createElement('tr'); let sum=0;
+    const tdName=document.createElement('td'); tdName.textContent=name; row.appendChild(tdName);
     allDiagonals.forEach(d=>{ const val=diags[d]||0; sum+=val; const td=document.createElement('td'); td.textContent=val; row.appendChild(td); });
     const tdSum=document.createElement('td'); tdSum.textContent=sum; tdSum.className="sum-col"; row.appendChild(tdSum);
     tbody.appendChild(row);
   });
 }
 
-// Обновление
+// Обновление данных
 async function updateStats(){
   await fetchAndCacheData();
   const lastDate=getLastDate(combinedDataCache);
@@ -187,10 +181,10 @@ async function updateStats(){
   displayDiagonalStats(filtered);
 }
 
-// Поиск серийника
+// Поиск
 async function searchSerial(serial){
-  const sheet1 = await getData('FI Station KOVALCHYK Y.');
-  const sheet2 = await getData('FI Station 2 ULANOVYCH.R');
+  const sheet1=await getData('FI Station KOVALCHYK Y.');
+  const sheet2=await getData('FI Station 2 ULANOVYCH.R');
   const combined=[...sheet1.slice(1),...sheet2.slice(1)];
   return combined.filter(r=>r[2]===serial).map(r=>({date:r[0]||"--",status:r[4]||"--",nameF:r[5]||"--",nameG:r[6]||"--",info:r[10]||"--"})).slice(0,20);
 }
@@ -208,8 +202,15 @@ document.getElementById('search').addEventListener('keypress',async(e)=>{
   }
 });
 
-document.getElementById('overview-toggle').addEventListener('click',()=>{ const t=document.getElementById('combined-table'); t.style.display=t.style.display==='none'?'table':'table'; });
-document.getElementById('diag-toggle').addEventListener('click',()=>{ const t=document.getElementById('diag-table'); t.style.display=t.style.display==='none'?'table':'table'; });
+// Скрытие/показ таблиц
+document.getElementById('overview-toggle').addEventListener('click',()=>{
+  const table=document.getElementById('combined-table');
+  table.style.display=(table.style.display==='none')?'table':'none';
+});
+document.getElementById('diag-toggle').addEventListener('click',()=>{
+  const table=document.getElementById('diag-table');
+  table.style.display=(table.style.display==='none')?'table':'none';
+});
 
 updateStats();
 setInterval(updateStats,25000);
