@@ -56,6 +56,14 @@
       padding-left: 20px;
       margin-bottom: -1px;
     }
+    .search-box {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 5px;
+      border: 1px solid #008080;
+      font-size: 16px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -75,11 +83,7 @@
     }
     td {
       font-size: 16px;
-    }
-    .clickable-name {
       cursor: pointer;
-      color: #0ff;
-      text-decoration: underline;
     }
     .total-row {
       font-weight: bold;
@@ -89,34 +93,6 @@
     .sum-col {
       background-color: #222;
       color: #0ff;
-    }
-    /* Tooltip */
-    .tooltip {
-      position: absolute;
-      background: rgba(0,0,0,0.9);
-      border: 1px solid #0ff;
-      border-radius: 6px;
-      padding: 10px;
-      color: #0ff;
-      font-size: 14px;
-      display: none;
-      z-index: 9999;
-      max-width: 400px;
-      max-height: 250px;
-      overflow-y: auto;
-    }
-    .tooltip table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .tooltip th, .tooltip td {
-      border: 1px solid #0ff;
-      padding: 4px;
-      font-size: 12px;
-    }
-    .tooltip th {
-      background: #008080;
-      color: #000;
     }
     /* Модалка */
     .modal {
@@ -160,8 +136,10 @@
     <div class="date-info" id="date-info">DATE: --</div>
   </div>
 
+  <!-- Первая таблица -->
   <div class="table-container">
     <button class="table-button" id="overview-toggle">FI Station Overview</button>
+    <input type="text" id="search-workers" class="search-box" placeholder="Поиск сотрудника...">
     <table id="combined-table">
       <thead>
         <tr>
@@ -178,8 +156,15 @@
     </table>
   </div>
 
-  <!-- Tooltip -->
-  <div class="tooltip" id="tooltip"></div>
+  <!-- Вторая таблица -->
+  <div class="table-container" id="diag-container">
+    <button class="table-button">Диагонали</button>
+    <input type="text" id="search-diags" class="search-box" placeholder="Поиск диагонали...">
+    <table>
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <!-- Модалка -->
   <div class="modal" id="modal">
@@ -251,7 +236,7 @@
     return diagStats;
   }
 
-  async function getWorkerSerials(workerName, limit = null) {
+  async function getWorkerSerials(workerName) {
     const combinedData = await fetchData();
     const lastDate = getLastDate(combinedData);
     const lastDateStr = lastDate.toISOString().split('T')[0];
@@ -261,30 +246,41 @@
       return recDate === lastDateStr && record.name === workerName;
     });
 
-    if (filtered.length === 0) {
-      return `<p>Нет данных</p>`;
-    }
-
-    let rows = filtered.map(f => `
-      <tr>
-        <td>${f.date}</td>
-        <td>${f.serial}</td>
-        <td>${f.status}</td>
-      </tr>
-    `);
-
-    if (limit) rows = rows.slice(0, limit);
+    if (filtered.length === 0) return `<p>Нет данных</p>`;
 
     return `
       <table>
         <thead>
-          <tr>
-            <th>Дата</th>
-            <th>Serial</th>
-            <th>Status</th>
-          </tr>
+          <tr><th>Дата</th><th>Serial</th><th>Status</th></tr>
         </thead>
-        <tbody>${rows.join('')}</tbody>
+        <tbody>
+          ${filtered.map(f => `<tr><td>${f.date}</td><td>${f.serial}</td><td>${f.status}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  async function getDiagSerials(diag) {
+    const combinedData = await fetchData();
+    const lastDate = getLastDate(combinedData);
+    const lastDateStr = lastDate.toISOString().split('T')[0];
+
+    const filtered = combinedData.filter(record => {
+      const recDate = record.date?.split(' ')[0] || '';
+      const diagPart = record.serial?.substr(3,3);
+      return recDate === lastDateStr && diagPart === diag && (record.status === 'OK' || record.status === 'NDF');
+    });
+
+    if (filtered.length === 0) return `<p>Нет данных</p>`;
+
+    return `
+      <table>
+        <thead>
+          <tr><th>Дата</th><th>Serial</th><th>Имя</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          ${filtered.map(f => `<tr><td>${f.date}</td><td>${f.serial}</td><td>${f.name}</td><td>${f.status}</td></tr>`).join('')}
+        </tbody>
       </table>
     `;
   }
@@ -293,13 +289,12 @@
     const tbody = document.querySelector('#combined-table tbody');
     tbody.innerHTML = '';
 
-    const totals = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
     const sortedStats = Object.entries(stats).sort(([, a], [, b]) => b.OK - a.OK);
 
     sortedStats.forEach(([name, data]) => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td class="clickable-name" data-name="${name}">${name}</td>
+        <td class="clickable" data-type="worker" data-value="${name}">${name}</td>
         <td>${data.NDF}</td>
         <td>${data.OK}</td>
         <td>${data.WAITING}</td>
@@ -309,30 +304,15 @@
       `;
       tbody.appendChild(row);
     });
-
-    const totalRow = document.createElement('tr');
-    totalRow.className = 'total-row';
-    totalRow.innerHTML = `<td>SUMA</td><td>${totals.NDF}</td><td>${totals.OK}</td><td>${totals.WAITING}</td><td>${totals['SCRAP TTL']}</td><td>${totals['SCRAP PNLA']}</td><td>${totals.total}</td>`;
-    tbody.appendChild(totalRow);
-
-    attachHoverAndClickEvents();
   }
 
   function displayDiagonalStats(diagStats) {
-    let container = document.getElementById('diag-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.className = 'table-container';
-      container.id = 'diag-container';
-      container.innerHTML = `<button class="table-button">Диагонали</button><table><thead></thead><tbody></tbody></table>`;
-      document.body.appendChild(container);
-    }
-
+    const container = document.querySelector('#diag-container');
     const allDiags = Array.from(new Set(Object.values(diagStats).flatMap(d => Object.keys(d)))).sort((a,b) => Number(a)-Number(b));
     const thead = container.querySelector('thead');
     const tbody = container.querySelector('tbody');
 
-    thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+    thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d=>`<th class="clickable" data-type="diag" data-value="${d}">${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
     tbody.innerHTML = '';
 
     Object.entries(diagStats).forEach(([name, diags]) => {
@@ -348,52 +328,28 @@
       row.innerHTML = rowHTML;
       tbody.appendChild(row);
     });
-
-    let totalHTML = `<td>SUMA</td>`;
-    let totalSum = 0;
-    allDiags.forEach(d=>{
-      const s = Object.values(diagStats).reduce((acc,obj)=>acc+(obj[d]||0),0);
-      totalSum += s;
-      totalHTML += `<td>${s}</td>`;
-    });
-    totalHTML += `<td class="sum-col">${totalSum}</td>`;
-    const totalRow = document.createElement('tr');
-    totalRow.className='total-row';
-    totalRow.innerHTML=totalHTML;
-    tbody.appendChild(totalRow);
   }
 
-  function attachHoverAndClickEvents() {
-    const tooltip = document.getElementById('tooltip');
+  function attachModalEvents() {
     const modal = document.getElementById('modal');
     const modalContent = document.getElementById('modal-content');
 
-    document.querySelectorAll('.clickable-name').forEach(cell => {
-      const workerName = cell.dataset.name;
-
-      cell.addEventListener('mouseenter', async (e) => {
-        tooltip.innerHTML = `<p style="color:yellow">Загрузка...</p>`;
-        tooltip.style.display = 'block';
-        tooltip.style.left = (e.pageX + 15) + 'px';
-        tooltip.style.top = (e.pageY + 15) + 'px';
-        const content = await getWorkerSerials(workerName, 10);
-        tooltip.innerHTML = `<b>${workerName}</b><br>${content}`;
-      });
-
-      cell.addEventListener('mousemove', (e) => {
-        tooltip.style.left = (e.pageX + 15) + 'px';
-        tooltip.style.top = (e.pageY + 15) + 'px';
-      });
-
-      cell.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-      });
-
+    document.querySelectorAll('.clickable').forEach(cell => {
       cell.addEventListener('click', async () => {
+        const type = cell.dataset.type;
+        const value = cell.dataset.value;
+
         modal.style.display = 'flex';
-        modalContent.innerHTML = `<button class="close-btn" id="close-modal">Закрыть</button><h2>${workerName}</h2><p style="color:yellow">Загрузка...</p>`;
-        const content = await getWorkerSerials(workerName);
-        modalContent.innerHTML = `<button class="close-btn" id="close-modal">Закрыть</button><h2>${workerName}</h2>${content}`;
+        modalContent.innerHTML = `<button class="close-btn" id="close-modal">Закрыть</button><h2>${value}</h2><p style="color:yellow">Загрузка...</p>`;
+
+        let content = '';
+        if (type === 'worker') {
+          content = await getWorkerSerials(value);
+        } else if (type === 'diag') {
+          content = await getDiagSerials(value);
+        }
+
+        modalContent.innerHTML = `<button class="close-btn" id="close-modal">Закрыть</button><h2>${value}</h2>${content}`;
         document.getElementById('close-modal').onclick = () => modal.style.display = 'none';
       });
     });
@@ -410,8 +366,37 @@
 
     displayCombinedStats(stats);
     displayDiagonalStats(diagStats);
+    attachModalEvents();
+
     document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
   }
+
+  // Поиск сотрудников
+  document.getElementById('search-workers').addEventListener('keyup', function() {
+    const filter = this.value.toUpperCase();
+    const rows = document.querySelectorAll('#combined-table tbody tr');
+    rows.forEach(row => {
+      const nameCell = row.querySelector('td');
+      if (nameCell && nameCell.textContent.toUpperCase().indexOf(filter) > -1) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+
+  // Поиск диагоналей
+  document.getElementById('search-diags').addEventListener('keyup', function() {
+    const filter = this.value.toUpperCase();
+    const rows = document.querySelectorAll('#diag-container tbody tr');
+    rows.forEach(row => {
+      if (row.textContent.toUpperCase().indexOf(filter) > -1) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
 
   document.getElementById('overview-toggle').addEventListener('click', () => {
     const table = document.getElementById('combined-table');
