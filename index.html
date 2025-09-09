@@ -121,13 +121,13 @@
     <div class="date-info" id="date-info">DATE: --</div>
   </div>
 
-  
+  <!-- Поиск -->
   <div class="table-container">
     <input type="text" id="search" placeholder="Podaj SN (Enter)">
     <div id="search-result"></div>
   </div>
 
-  
+  <!-- Первая таблица -->
   <div class="table-container">
     <button class="table-button" id="overview-toggle">FI Station Overview</button>
     <table id="combined-table">
@@ -146,9 +146,9 @@
     </table>
   </div>
 
-  <!-- Вторая таблица с диагоналями -->
+  <!-- Вторая таблица -->
   <div class="table-container" id="diag-container">
-    <button class="table-button">FI Station Diagonal Stats</button>
+    <button class="table-button" id="diag-toggle">FI Station Diagonals</button>
     <table id="diag-table">
       <thead></thead>
       <tbody></tbody>
@@ -269,27 +269,26 @@
       tbody.appendChild(totalRow);
     }
 
-    function displayDiagonalTable(diagStats) {
-      const container = document.querySelector('#diag-container');
-      const table = container.querySelector('#diag-table');
-      const tbody = table.querySelector('tbody');
-      const thead = table.querySelector('thead');
-
-      const allDiagonals = Array.from(new Set(Object.values(diagStats).flatMap(d => Object.keys(d)))).sort((a,b)=>Number(a)-Number(b));
-
-      thead.innerHTML = `<tr><th>NAME</th>${allDiagonals.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+    function displayDiagonalStats(diagStats) {
+      const tbody = document.querySelector('#diag-table tbody');
+      const thead = document.querySelector('#diag-table thead');
+      const allDiagonals = Array.from(new Set(Object.values(diagStats).flatMap(obj => Object.keys(obj)))).sort((a, b) => Number(a) - Number(b));
+      
+      thead.innerHTML = `<tr><th>NAME</th>${allDiagonals.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
       tbody.innerHTML = '';
-
+      
       Object.entries(diagStats).forEach(([name, diagonals]) => {
+        const row = document.createElement('tr');
         let rowHTML = `<td>${name}</td>`;
-        let sum = 0;
-        allDiagonals.forEach(d => {
-          const val = diagonals[d]||0;
-          sum += val;
+        let rowSum = 0;
+
+        allDiagonals.forEach(diag => {
+          const val = diagonals[diag] || 0;
+          rowSum += val;
           rowHTML += `<td>${val}</td>`;
         });
-        rowHTML += `<td class="sum-col">${sum}</td>`;
-        const row = document.createElement('tr');
+
+        rowHTML += `<td class="sum-col">${rowSum}</td>`;
         row.innerHTML = rowHTML;
         tbody.appendChild(row);
       });
@@ -309,7 +308,7 @@
       const diagStats = calculateDiagonalStats(filtered);
 
       displayCombinedStats(stats);
-      displayDiagonalTable(diagStats);
+      displayDiagonalStats(diagStats);
 
       document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
     }
@@ -319,8 +318,74 @@
       table.style.display = table.style.display === 'none' ? 'table' : 'none';
     });
 
+    document.getElementById('diag-toggle').addEventListener('click', () => {
+      const table = document.getElementById('diag-table');
+      table.style.display = table.style.display === 'none' ? 'table' : 'none';
+    });
+
     setInterval(updateStats, 25000);
     updateStats();
+
+    // Поиск по всем данным
+    async function searchSerial(serial) {
+      const sheet1Data = await getData('FI Station KOVALCHYK Y.');
+      const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
+      const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
+
+      let results = combined.filter(row => row[2] === serial);
+      results = results.map(row => ({
+        date: row[0] || "--",
+        status: row[4] || "--",
+        nameF: row[5] || "--",
+        nameG: row[6] || "--",
+        info: row[10] || "--"
+      }));
+
+      results.sort((a, b) => new Date(b.date) - new Date(a.date));
+      return results.slice(0, 20);
+    }
+
+    document.getElementById('search').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        const serial = e.target.value.trim();
+        const output = document.getElementById('search-result');
+
+        if (!serial) {
+          output.innerHTML = "<p style='color:red'>Podaj SN!</p>";
+          return;
+        }
+
+        const data = await searchSerial(serial);
+        if (data.length > 0) {
+          let rows = data.map(d => `
+            <tr>
+              <td>${d.date}</td>
+              <td>${d.status}</td>
+              <td>${d.nameF}</td>
+              <td>${d.nameG}</td>
+              <td>${d.info}</td>
+            </tr>
+          `).join('');
+
+          output.innerHTML = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Status</th>
+                  <th>NAPRAWIACZ</th>
+                  <th>FINALNA</th>
+                  <th>INFO</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          `;
+        } else {
+          output.innerHTML = "<p style='color:yellow'>Brak info!</p>";
+        }
+      }
+    });
   </script>
 </body>
 </html>
