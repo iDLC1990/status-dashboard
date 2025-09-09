@@ -11,7 +11,9 @@ body::before { content:""; position: fixed; top:0; left:0; width:100%; height:10
 .header h1 { margin:0; color:#008080; font-size:24px; }
 .date-info { color:#008080; font-size:24px; }
 .table-container { width:80%; margin:24px auto; }
-.table-button { display:block; width:100%; padding:12px; background-color:#008080; color:#000; font-size:18px; font-weight:bold; border:none; border-radius:10px 10px 0 0; cursor:pointer; text-align:left; padding-left:20px; margin-bottom:-1px; }
+.table-header { display:flex; align-items:center; justify-content:space-between; background-color:#008080; border-radius:10px 10px 0 0; padding:8px 16px; }
+.table-header span { font-weight:bold; font-size:18px; color:#000; }
+.table-header button { background:none; border:none; font-size:20px; cursor:pointer; color:#000; }
 table { width:100%; border-collapse:collapse; background-color:#555; border-radius:0 0 10px 10px; }
 table, th, td { border:1px solid #fff; }
 th, td { padding:10px; text-align:center; }
@@ -47,7 +49,10 @@ td { font-size:16px; cursor:pointer; }
 </div>
 
 <div class="table-container">
-  <button class="table-button" id="overview-toggle">FI Station Overview</button>
+  <div class="table-header">
+    <span>FI Station Overview</span>
+    <button id="overview-hide">👁</button>
+  </div>
   <table id="combined-table">
     <thead>
       <tr>
@@ -59,7 +64,10 @@ td { font-size:16px; cursor:pointer; }
 </div>
 
 <div class="table-container" id="diag-container">
-  <button class="table-button" id="diag-toggle">FI Station Diagonals</button>
+  <div class="table-header">
+    <span>FI Station Diagonals</span>
+    <button id="diag-hide">👁</button>
+  </div>
   <table id="diag-table">
     <thead></thead>
     <tbody></tbody>
@@ -135,6 +143,9 @@ function displayCombinedStats(filtered){
     if(!stats[r.name]) stats[r.name]={NDF:0,OK:0,WAITING:0,'SCRAP TTL':0,'SCRAP PNLA':0,total:0};
     if(r.status==="NDF") stats[r.name].NDF++;
     if(r.status==="OK") stats[r.name].OK++;
+    if(r.status==="WAITING") stats[r.name].WAITING++;
+    if(r.status==="SCRAP TTL") stats[r.name]["SCRAP TTL"]++;
+    if(r.status==="SCRAP PNLA") stats[r.name]["SCRAP PNLA"]++;
     stats[r.name].total++;
   });
   const tbody=document.querySelector('#combined-table tbody');
@@ -202,14 +213,19 @@ document.getElementById('search').addEventListener('keypress',async(e)=>{
   }
 });
 
-// Скрытие/показ таблиц
-document.getElementById('overview-toggle').addEventListener('click',()=>{
+// Hide/Show таблиц
+const overviewHideBtn=document.getElementById('overview-hide');
+overviewHideBtn.addEventListener('click',()=>{
   const table=document.getElementById('combined-table');
-  table.style.display=(table.style.display==='none')?'table':'none';
+  if(table.style.display==='none'){ table.style.display='table'; overviewHideBtn.textContent='👁'; }
+  else { table.style.display='none'; overviewHideBtn.textContent='🚫'; }
 });
-document.getElementById('diag-toggle').addEventListener('click',()=>{
+
+const diagHideBtn=document.getElementById('diag-hide');
+diagHideBtn.addEventListener('click',()=>{
   const table=document.getElementById('diag-table');
-  table.style.display=(table.style.display==='none')?'table':'none';
+  if(table.style.display==='none'){ table.style.display='table'; diagHideBtn.textContent='👁'; }
+  else { table.style.display='none'; diagHideBtn.textContent='🚫'; }
 });
 
 updateStats();
