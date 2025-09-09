@@ -1,100 +1,75 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LCDR LIVE DATA</title>
-  <style>
-    body {
-      background: url('https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/circuit-board.jpg') no-repeat center center fixed;
-      background-size: cover;
-      color: #fff;
-      font-family: Arial, sans-serif;
-    }
-    body::before {
-      content: "";
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: -1;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 10%;
-      background-color: rgba(17,17,17,0.7);
-    }
-    .header h1 {
-      margin:0;
-      color:#008080;
-      font-size:24px;
-    }
-    .date-info {
-      color:#008080;
-      font-size:24px;
-    }
-    .table-container {
-      width:80%;
-      margin:24px auto;
-    }
-    .table-button {
-      display:block;
-      width:100%;
-      padding:12px;
-      background-color:#008080;
-      color:#000;
-      font-size:18px;
-      font-weight:bold;
-      border:none;
-      border-radius:10px 10px 0 0;
-      cursor:pointer;
-      text-align:left;
-      padding-left:20px;
-      margin-bottom:-1px;
-    }
-    table {
-      width:100%;
-      border-collapse:collapse;
-      background-color:#555;
-      border-radius:0 0 10px 10px;
-    }
-    table, th, td { border:1px solid #fff; }
-    th, td { padding:10px; text-align:center; }
-    th { font-weight:bold; font-size:16px; }
-    td { font-size:16px; }
-    .total-row { font-weight:bold; background-color:#333; color:#008080; }
-    .sum-col { background-color:#222; color:#0ff; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LCDR LIVE DATA</title>
+<style>
+  body {
+    background: url('https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/circuit-board.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+    font-family: Arial, sans-serif;
+  }
+  body::before {
+    content:"";
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.5);
+    z-index:-1;
+  }
+  .header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 10%;
+    background-color: rgba(17,17,17,0.7);
+  }
+  .header h1 { margin:0; color:#008080; font-size:24px; }
+  .date-info { color:#008080; font-size:24px; }
+  .table-container { width:80%; margin:24px auto; }
+  .table-button {
+    display:block; width:100%; padding:12px;
+    background-color:#008080; color:#000;
+    font-size:18px; font-weight:bold;
+    border:none; border-radius:10px 10px 0 0;
+    cursor:pointer; text-align:left; padding-left:20px;
+    margin-bottom:-1px;
+  }
+  table {
+    width:100%; border-collapse:collapse; background-color:#555;
+    border-radius:0 0 10px 10px;
+  }
+  table, th, td { border:1px solid #fff; }
+  th, td { padding:10px; text-align:center; }
+  th { font-weight:bold; font-size:16px; }
+  td { font-size:16px; }
+  .total-row { font-weight:bold; background-color:#333; color:#008080; }
+  .sum-col { background-color:#222; color:#0ff; }
+  #search { width:80%; padding:12px; font-size:16px; border-radius:5px; border:none; margin:20px auto; display:block; }
+  #search-result { margin-top:15px; }
+  #search-result table { margin-top:10px; border:2px solid #0ff; background-color:#333; }
+  #search-result th { background-color:#008080; color:#000; }
+  #search-result td { color:#0ff; }
 
-    #search {
-      width:80%;
-      padding:12px;
-      font-size:16px;
-      border-radius:5px;
-      border:none;
-      margin:20px auto;
-      display:block;
-    }
-    #search-result { margin-top:15px; }
-    #search-result table {
-      margin-top:10px;
-      border:2px solid #0ff;
-      background-color:#333;
-    }
-    #search-result th { background-color:#008080; color:#000; }
-    #search-result td { color:#0ff; }
-
-    #tooltip-table {
-      position:absolute;
-      background:#333;
-      border:1px solid #0ff;
-      padding:10px;
-      z-index:1000;
-    }
-  </style>
+  /* Модалка */
+  #modal {
+    display:none; position:fixed; top:0; left:0;
+    width:100%; height:100%; background: rgba(0,0,0,0.7);
+    justify-content:center; align-items:center; z-index:10000;
+  }
+  #modal-content {
+    background:#222; color:#0ff; padding:20px;
+    border:2px solid #0ff; border-radius:10px; max-height:80%; overflow:auto;
+  }
+  #modal-close {
+    background:#008080; color:#000; border:none; padding:5px 10px; cursor:pointer; font-weight:bold; margin-bottom:10px;
+  }
+  #modal table { width:100%; border-collapse:collapse; }
+  #modal th, #modal td { border:1px solid #0ff; padding:8px; text-align:center; }
+  #modal th { background:#008080; color:#000; }
+</style>
 </head>
 <body>
   <div class="header">
@@ -133,6 +108,14 @@
     </table>
   </div>
 
+  <!-- Модалка -->
+  <div id="modal">
+    <div id="modal-content">
+      <button id="modal-close">Закрыть</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
 <script>
 const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
 const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
@@ -145,39 +128,39 @@ const diagonalMapSuffix = { '860':86,'850':85,'750':75,'700':70,'650':65,'580':5
 
 function extractDiagonal(serial){
   if(!serial||serial.length<6) return null;
-  const prefix = serial.substr(0,3);
+  const prefix=serial.substr(0,3);
   if(diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
-  const suffix = serial.substr(3,3);
+  const suffix=serial.substr(3,3);
   if(diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
   return null;
 }
 
 async function getData(sheetName){
   try{
-    const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
+    const response=await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
     if(!response.ok) throw new Error("API request failed");
-    const data = await response.json();
-    return data.values || [];
-  } catch(err){ console.error(err); return []; }
+    const data=await response.json();
+    return data.values||[];
+  }catch(err){ console.error(err); return []; }
 }
 
-let combinedDataCache = [];
+let combinedDataCache=[];
 async function fetchAndCacheData(){
-  const sheet1Data = await getData('FI Station KOVALCHYK Y.');
-  const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
-  combinedDataCache = [...sheet1Data.slice(1), ...sheet2Data.slice(1)].map(row=>({
+  const sheet1Data=await getData('FI Station KOVALCHYK Y.');
+  const sheet2Data=await getData('FI Station 2 ULANOVYCH.R');
+  combinedDataCache=[...sheet1Data.slice(1),...sheet2Data.slice(1)].map(row=>({
     date: row[0], serial: row[2], status: row[4], name: row[5]
   }));
   return combinedDataCache;
 }
 
 function getLastDate(data){
-  const dates = data.map(r=>r.date?.split(' ')[0]?new Date(r.date.split(' ')[0]):new Date(0));
+  const dates=data.map(r=>r.date?.split(' ')[0]?new Date(r.date.split(' ')[0]):new Date(0));
   return new Date(Math.max(...dates));
 }
 
 function calculateStats(data){
-  const stats = {};
+  const stats={};
   data.forEach(({name,status})=>{
     if(!stats[name]) stats[name]={NDF:0,OK:0,WAITING:0,'SCRAP TTL':0,'SCRAP PNLA':0,total:0};
     if(status==='NDF') stats[name].NDF++;
@@ -194,7 +177,7 @@ function calculateDiagonalStats(data){
   const diagStats={};
   data.forEach(({name,serial,status})=>{
     if(status!=='OK'&&status!=='NDF') return;
-    const diag = extractDiagonal(serial);
+    const diag=extractDiagonal(serial);
     if(!diag) return;
     if(!diagStats[name]) diagStats[name]={};
     diagStats[name][diag]=(diagStats[name][diag]||0)+1;
@@ -202,48 +185,37 @@ function calculateDiagonalStats(data){
   return diagStats;
 }
 
-// Tooltip
-async function showTooltip(e,name){
-  const lastDateStr = document.getElementById('date-info').textContent.split(' ')[1];
-  const records = combinedDataCache.filter(r=>r.name===name && r.date?.split(' ')[0]===lastDateStr);
+// Модалка
+function openModal(name){
+  const lastDateStr=document.getElementById('date-info').textContent.split(' ')[1];
+  const records=combinedDataCache.filter(r=>r.name===name && r.date?.split(' ')[0]===lastDateStr);
   if(records.length===0) return;
 
-  let html = '<table style="border:1px solid #0ff; background:#222;"><tr><th>Serial</th><th>Status</th></tr>';
+  let html='<table><tr><th>Serial</th><th>Status</th></tr>';
   records.forEach(r=>{ html+=`<tr><td>${r.serial}</td><td>${r.status}</td></tr>`; });
   html+='</table>';
 
-  let tooltip=document.createElement('div');
-  tooltip.id='tooltip-table';
-  tooltip.innerHTML=html;
-  tooltip.style.position='absolute';
-  tooltip.style.background='#333';
-  tooltip.style.border='1px solid #0ff';
-  tooltip.style.padding='10px';
-  tooltip.style.zIndex='1000';
-  document.body.appendChild(tooltip);
-
-  function moveTooltip(event){
-    tooltip.style.top=(event.pageY+15)+'px';
-    tooltip.style.left=(event.pageX+15)+'px';
-  }
-  moveTooltip(e);
-  e.target.addEventListener('mousemove',moveTooltip);
-  e.target.addEventListener('mouseout',()=>{tooltip.remove();},{once:true});
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').style.display='flex';
 }
+
+document.getElementById('modal-close').addEventListener('click',()=>{
+  document.getElementById('modal').style.display='none';
+});
 
 // Верхняя таблица
 function displayCombinedStats(stats){
   const tbody=document.querySelector('#combined-table tbody');
   tbody.innerHTML='';
   const totals={NDF:0,OK:0,WAITING:0,'SCRAP TTL':0,'SCRAP PNLA':0,total:0};
-  const sortedStats = Object.entries(stats).sort(([,a],[,b])=>b.OK-a.OK);
+  const sortedStats=Object.entries(stats).sort(([,a],[,b])=>b.OK-a.OK);
 
   sortedStats.forEach(([name,data])=>{
     const row=document.createElement('tr');
     const nameTd=document.createElement('td');
     nameTd.textContent=name;
     nameTd.style.cursor='pointer';
-    nameTd.addEventListener('mouseover',e=>showTooltip(e,name));
+    nameTd.addEventListener('click',()=>openModal(name));
     row.appendChild(nameTd);
 
     row.innerHTML+=`<td>${data.NDF}</td><td>${data.OK}</td><td>${data.WAITING}</td><td>${data['SCRAP TTL']}</td><td>${data['SCRAP PNLA']}</td><td>${data.total}</td>`;
