@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="pl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -35,7 +35,16 @@
     }
     .date-info {
       color: #008080;
-      font-size: 24px;
+      font-size: 20px;
+      margin-left: 20px;
+    }
+    .search-box {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #008080;
+      font-size: 16px;
+      margin-left: 20px;
+      width: 250px;
     }
     .table-container {
       width: 80%;
@@ -55,14 +64,6 @@
       text-align: left;
       padding-left: 20px;
       margin-bottom: -1px;
-    }
-    .search-box {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 8px;
-      border-radius: 5px;
-      border: 1px solid #008080;
-      font-size: 16px;
     }
     table {
       width: 100%;
@@ -122,7 +123,7 @@
       background: #008080;
       color: #000;
     }
-    /* Модалка */
+    /* Modal */
     .modal {
       display: none;
       position: fixed;
@@ -156,37 +157,56 @@
       border-radius: 5px;
       cursor: pointer;
     }
+    #search-result {
+      width: 80%;
+      margin: 20px auto;
+    }
+    #search-result table {
+      width: 100%;
+      border: 2px solid #0ff;
+      background: #333;
+    }
+    #search-result th {
+      background: #008080;
+      color: #000;
+    }
+    #search-result td {
+      color: #0ff;
+    }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>LCDR LIVE DATA 2025</h1>
-    <div class="date-info" id="date-info">DATE: --</div>
+    <input type="text" id="search" class="search-box" placeholder="Wpisz numer seryjny i Enter...">
+    <div class="date-info" id="date-info">DATA: --</div>
   </div>
 
-  <!-- Первая таблица -->
+  <!-- Wyniki wyszukiwania -->
+  <div id="search-result"></div>
+
+  <!-- Pierwsza tabela -->
   <div class="table-container">
-    <button class="table-button" id="overview-toggle">FI Station Overview</button>
-    <input type="text" id="search-workers" class="search-box" placeholder="Поиск сотрудника...">
+    <button class="table-button" id="overview-toggle">FI Station - Przegląd</button>
     <table id="combined-table">
       <thead>
         <tr>
-          <th>NAME</th>
+          <th>PRACOWNIK</th>
           <th>NDF</th>
           <th>OK</th>
           <th>WAITING</th>
           <th>SCRAP TTL</th>
           <th>SCRAP PNLA</th>
-          <th>SUMA CALKOWITA</th>
+          <th>SUMA</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
   </div>
 
-  <!-- Вторая таблица -->
+  <!-- Druga tabela -->
   <div class="table-container" id="diag-container">
-    <button class="table-button">Диагонали</button>
+    <button class="table-button"></button>
     <table>
       <thead></thead>
       <tbody></tbody>
@@ -196,10 +216,10 @@
   <!-- Tooltip -->
   <div class="tooltip" id="tooltip"></div>
 
-  <!-- Модалка -->
+  <!-- Modal -->
   <div class="modal" id="modal">
     <div class="modal-content" id="modal-content">
-      <button class="close-btn" id="close-modal">Закрыть</button>
+      <button class="close-btn" id="close-modal">Zamknij</button>
     </div>
   </div>
 
@@ -215,7 +235,7 @@
       const data = await response.json();
       return data.values || [];
     } catch (err) {
-      console.error(`Ошибка загрузки ${sheetName}:`, err);
+      console.error(`Błąd ładowania ${sheetName}:`, err);
       return [];
     }
   }
@@ -228,10 +248,66 @@
       date: row[0],
       serial: row[2],
       status: row[4],
-      name: row[5]
+      name: row[5],
+      nameG: row[6],
+      info: row[10]
     }));
   }
 
+  // Wyszukiwanie numeru seryjnego w całym arkuszu
+  async function searchSerial(serial) {
+    const data = await fetchData();
+    let results = data.filter(row => row.serial === serial);
+
+    results.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return results.slice(0, 10);
+  }
+
+  document.getElementById('search').addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      const serial = e.target.value.trim();
+      const output = document.getElementById('search-result');
+
+      if (!serial) {
+        output.innerHTML = "<p style='color:red'>Wpisz numer seryjny!</p>";
+        return;
+      }
+
+      const data = await searchSerial(serial);
+      if (data.length > 0) {
+        let rows = data.map(d => `
+          <tr>
+            <td>${d.date}</td>
+            <td>${d.status}</td>
+            <td>${d.name}</td>
+            <td>${d.nameG}</td>
+            <td>${d.info}</td>
+          </tr>
+        `).join('');
+
+        output.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Status</th>
+                <th>Pracownik</th>
+                <th>Finałna</th>
+                <th>Info</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        `;
+      } else {
+        output.innerHTML = "<p style='color:yellow'>Brak informacji!</p>";
+      }
+    }
+  });
+
+  // Funkcje statystyk
   function getLastDate(data) {
     const dates = data.map(record => {
       const datePart = record.date?.split(' ')[0];
@@ -243,7 +319,7 @@
   function calculateStats(data) {
     const stats = {};
     data.forEach(({ name, status }) => {
-      if (!stats[name]) stats[name] = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
+      if (!stats[name]) stats[name] = { NDF: 0, OK: 0, OCZEKUJĄCE: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
       if (status === 'NDF') stats[name].NDF++;
       if (status === 'OK') stats[name].OK++;
       if (status === 'WAITING') stats[name].WAITING++;
@@ -266,75 +342,10 @@
     return diagStats;
   }
 
-  async function getWorkerSerials(workerName, limit = null) {
-    const combinedData = await fetchData();
-    const lastDate = getLastDate(combinedData);
-    const lastDateStr = lastDate.toISOString().split('T')[0];
-
-    const filtered = combinedData.filter(record => {
-      const recDate = record.date?.split(' ')[0] || '';
-      return recDate === lastDateStr && record.name === workerName;
-    });
-
-    if (filtered.length === 0) return `<p>Нет данных</p>`;
-
-    const sliced = limit ? filtered.slice(0, limit) : filtered;
-
-    return `
-      <table>
-        <thead><tr><th>Дата</th><th>Serial</th><th>Status</th></tr></thead>
-        <tbody>
-          ${sliced.map(f => `<tr><td>${f.date}</td><td>${f.serial}</td><td>${f.status}</td></tr>`).join('')}
-        </tbody>
-      </table>
-      ${limit ? `<p style="color:yellow">Показаны первые ${limit} из ${filtered.length}</p>` : `<p style="color:#0ff">Всего: ${filtered.length}</p>`}
-    `;
-  }
-
-  // Tooltip и модалка
-  function attachTooltipAndModal() {
-    const tooltip = document.getElementById('tooltip');
-    const modal = document.getElementById('modal');
-    const modalContent = document.getElementById('modal-content');
-
-    document.querySelectorAll('.clickable').forEach(cell => {
-      const workerName = cell.dataset.value;
-
-      cell.addEventListener('mouseenter', async (e) => {
-        tooltip.innerHTML = `<p style="color:yellow">Загрузка...</p>`;
-        tooltip.style.display = 'block';
-        tooltip.style.left = (e.pageX + 15) + 'px';
-        tooltip.style.top = (e.pageY + 15) + 'px';
-
-        const content = await getWorkerSerials(workerName, 5);
-        tooltip.innerHTML = `<b>${workerName}</b><br>${content}`;
-      });
-
-      cell.addEventListener('mousemove', (e) => {
-        tooltip.style.left = (e.pageX + 15) + 'px';
-        tooltip.style.top = (e.pageY + 15) + 'px';
-      });
-
-      cell.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-      });
-
-      cell.addEventListener('click', async () => {
-        modal.style.display = 'flex';
-        modalContent.innerHTML = `<button class="close-btn" id="close-modal">Закрыть</button><h2>${workerName}</h2><p style="color:yellow">Загрузка...</p>`;
-        const content = await getWorkerSerials(workerName);
-        modalContent.innerHTML = `<button class="close-btn" id="close-modal">Закрыть</button><h2>${workerName}</h2>${content}`;
-        document.getElementById('close-modal').onclick = () => modal.style.display = 'none';
-      });
-    });
-  }
-
   function displayCombinedStats(stats) {
     const tbody = document.querySelector('#combined-table tbody');
     tbody.innerHTML = '';
-    const sortedStats = Object.entries(stats).sort(([, a], [, b]) => b.OK - a.OK);
-
-    sortedStats.forEach(([name, data]) => {
+    Object.entries(stats).forEach(([name, data]) => {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td class="clickable" data-value="${name}">${name}</td>
@@ -355,7 +366,7 @@
     const thead = container.querySelector('thead');
     const tbody = container.querySelector('tbody');
 
-    thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+    thead.innerHTML = `<tr><th>PRACOWNIK</th>${allDiags.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
     tbody.innerHTML = '';
 
     Object.entries(diagStats).forEach(([name, diags]) => {
@@ -384,24 +395,9 @@
 
     displayCombinedStats(stats);
     displayDiagonalStats(diagStats);
-    attachTooltipAndModal();
 
-    document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
+    document.getElementById('date-info').textContent = `DATA: ${lastDateStr}`;
   }
-
-  // Поиск сотрудников только в первой таблице
-  document.getElementById('search-workers').addEventListener('keyup', function() {
-    const filter = this.value.toUpperCase();
-    const rows = document.querySelectorAll('#combined-table tbody tr');
-    rows.forEach(row => {
-      const nameCell = row.querySelector('td');
-      if (nameCell && nameCell.textContent.toUpperCase().indexOf(filter) > -1) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
-  });
 
   document.getElementById('overview-toggle').addEventListener('click', () => {
     const table = document.getElementById('combined-table');
