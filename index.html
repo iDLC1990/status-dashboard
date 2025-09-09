@@ -1,44 +1,97 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LCDR LIVE DATA</title>
 <style>
-body { font-family: Arial; background:#111; color:#fff; }
-table { border-collapse: collapse; width:80%; margin:20px auto; }
-th, td { border:1px solid #fff; padding:8px; text-align:center; }
-th { background:#008080; color:#000; }
-td { cursor:pointer; }
+body {
+  background: url('https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/circuit-board.jpg') no-repeat center center fixed;
+  background-size: cover;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+body::before {
+  content:"";
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  z-index:-1;
+}
+.header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:20px 10%; background-color: rgba(17,17,17,0.7);
+}
+.header h1 { margin:0; color:#008080; font-size:24px; }
+.date-info { color:#008080; font-size:24px; }
+.table-container { width:80%; margin:24px auto; }
+.table-button {
+  display:block; width:100%; padding:12px; background-color:#008080; color:#000;
+  font-size:18px; font-weight:bold; border:none; border-radius:10px 10px 0 0;
+  cursor:pointer; text-align:left; padding-left:20px; margin-bottom:-1px;
+}
+table {
+  width:100%; border-collapse:collapse; background-color:#555;
+  border-radius:0 0 10px 10px;
+}
+table, th, td { border:1px solid #fff; }
+th, td { padding:10px; text-align:center; }
+th { font-weight:bold; font-size:16px; }
+td { font-size:16px; cursor:pointer; }
+.total-row { font-weight:bold; background-color:#333; color:#008080; }
+.sum-col { background-color:#222; color:#0ff; }
+#search { width:80%; padding:12px; font-size:16px; border-radius:5px; border:none; margin:20px auto; display:block; }
+#search-result { margin-top:15px; }
+#search-result table { margin-top:10px; border:2px solid #0ff; background-color:#333; }
+#search-result th { background-color:#008080; color:#000; }
+#search-result td { color:#0ff; }
+
+/* Модалка */
 #modal {
-  display:none;
-  position:fixed; top:0; left:0; width:100%; height:100%;
-  background: rgba(0,0,0,0.7);
-  justify-content:center; align-items:center;
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;
 }
 #modal.show { display:flex; }
 #modal-content {
-  background:#222; color:#0ff; padding:20px; border:2px solid #0ff; border-radius:10px; max-height:80%; overflow:auto;
+  background:#222; color:#0ff; padding:20px; border:2px solid #0ff; border-radius:10px;
+  max-height:80%; overflow:auto;
 }
-#modal-close { background:#008080; color:#000; border:none; padding:5px 10px; cursor:pointer; margin-bottom:10px; }
-#modal table { width:100%; }
-#modal th, #modal td { border:1px solid #0ff; padding:5px; text-align:center; }
+#modal-close { background:#008080; color:#000; border:none; padding:5px 10px; cursor:pointer; font-weight:bold; margin-bottom:10px; }
+#modal table { width:100%; border-collapse:collapse; }
+#modal th, #modal td { border:1px solid #0ff; padding:8px; text-align:center; }
 #modal th { background:#008080; color:#000; }
 </style>
 </head>
 <body>
 
-<h1 style="text-align:center;">LCDR LIVE DATA 2025</h1>
-<div id="date-info" style="text-align:center;">DATE: --</div>
+<div class="header">
+  <h1>LCDR LIVE DATA 2025</h1>
+  <div class="date-info" id="date-info">DATE: --</div>
+</div>
 
-<table id="combined-table">
-  <thead>
-    <tr>
-      <th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th><th>SCRAP TTL</th><th>SCRAP PNLA</th><th>SUMA CALKOWITA</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<div class="table-container">
+  <input type="text" id="search" placeholder="Podaj SN (Enter)">
+  <div id="search-result"></div>
+</div>
+
+<div class="table-container">
+  <button class="table-button" id="overview-toggle">FI Station Overview</button>
+  <table id="combined-table">
+    <thead>
+      <tr>
+        <th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th><th>SCRAP TTL</th><th>SCRAP PNLA</th><th>SUMA CALKOWITA</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="table-container" id="diag-container">
+  <button class="table-button" id="diag-toggle">FI Station Diagonals</button>
+  <table id="diag-table">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+</div>
 
 <!-- Модалка -->
 <div id="modal">
@@ -49,62 +102,74 @@ td { cursor:pointer; }
 </div>
 
 <script>
-// Пример данных
-let combinedDataCache=[
-  {name:"Иванов",serial:"ABC123",status:"OK",date:"2025-09-09 10:00"},
-  {name:"Иванов",serial:"ABC124",status:"NDF",date:"2025-09-09 11:00"},
-  {name:"Петров",serial:"DEF456",status:"OK",date:"2025-09-09 09:30"}
-];
+const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
+const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
+const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
-const lastDateStr="2025-09-09";
-document.getElementById('date-info').textContent="DATE: "+lastDateStr;
+let combinedDataCache=[];
 
+// Получение данных с Google Sheets
+async function getData(sheetName){
+  try {
+    const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
+    if(!response.ok) throw new Error("API request failed");
+    const data = await response.json();
+    return data.values || [];
+  } catch(err){ console.error(err); return []; }
+}
+
+// Объединение данных и кэш
+async function fetchAndCacheData(){
+  const sheet1 = await getData('FI Station KOVALCHYK Y.');
+  const sheet2 = await getData('FI Station 2 ULANOVYCH.R');
+  combinedDataCache = [...sheet1.slice(1), ...sheet2.slice(1)].map(r=>({
+    date: r[0] || "--",
+    serial: r[2] || "--",
+    status: r[4] || "--",
+    name: r[5] || "--"
+  }));
+  return combinedDataCache;
+}
+
+// Получение последней даты
+function getLastDate(data){
+  const dates=data.map(r=>r.date?.split(' ')[0]?new Date(r.date.split(' ')[0]):new Date(0));
+  return new Date(Math.max(...dates));
+}
+
+// Модалка
 const modal=document.getElementById('modal');
 const modalBody=document.getElementById('modal-body');
 document.getElementById('modal-close').addEventListener('click',()=>modal.classList.remove('show'));
-modal.addEventListener('click',e=>{if(e.target===modal) modal.classList.remove('show');});
+modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('show'); });
 
 function openModal(name){
-  const records=combinedDataCache.filter(r=>r.name===name && r.date.split(' ')[0]===lastDateStr);
-  if(records.length===0){
-    modalBody.innerHTML="<p>Нет данных за текущий день</p>";
-  } else {
-    const table=document.createElement('table');
-    const thead=document.createElement('thead');
-    const headRow=document.createElement('tr');
-    headRow.innerHTML="<th>Serial</th><th>Status</th>";
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-
-    const tbody=document.createElement('tbody');
-    records.forEach(r=>{
-      const tr=document.createElement('tr');
-      const td1=document.createElement('td'); td1.textContent=r.serial;
-      const td2=document.createElement('td'); td2.textContent=r.status;
-      tr.appendChild(td1); tr.appendChild(td2);
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    modalBody.innerHTML="";
-    modalBody.appendChild(table);
+  const lastDateStr = document.getElementById('date-info').textContent.split(' ')[1];
+  const records = combinedDataCache.filter(r => r.name === name && r.date.split(' ')[0] === lastDateStr);
+  if(records.length === 0){ modalBody.innerHTML="<p>Нет данных за текущий день</p>"; }
+  else {
+    let html='<table><tr><th>Serial</th><th>Status</th></tr>';
+    records.forEach(r=>html+=`<tr><td>${r.serial}</td><td>${r.status}</td></tr>`);
+    html+='</table>'; modalBody.innerHTML = html;
   }
   modal.classList.add('show');
 }
 
-function displayCombinedStats(){
+// Отображение верхней таблицы
+function displayCombinedStats(filtered){
   const stats={};
-  combinedDataCache.forEach(r=>{
+  filtered.forEach(r=>{
     if(!stats[r.name]) stats[r.name]={NDF:0,OK:0,WAITING:0,'SCRAP TTL':0,'SCRAP PNLA':0,total:0};
     if(r.status==="NDF") stats[r.name].NDF++;
     if(r.status==="OK") stats[r.name].OK++;
     stats[r.name].total++;
   });
 
-  const tbody=document.querySelector('#combined-table tbody');
-  tbody.innerHTML="";
+  const tbody = document.querySelector('#combined-table tbody');
+  tbody.innerHTML = "";
   for(let name in stats){
-    const row=document.createElement('tr');
-    const tdName=document.createElement('td');
+    const row = document.createElement('tr');
+    const tdName = document.createElement('td');
     tdName.textContent=name;
     tdName.addEventListener('click',()=>openModal(name));
     row.appendChild(tdName);
@@ -112,13 +177,78 @@ function displayCombinedStats(){
     ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA","total"].forEach(k=>{
       const td=document.createElement('td'); td.textContent=stats[name][k]; row.appendChild(td);
     });
-
     tbody.appendChild(row);
   }
 }
 
-displayCombinedStats();
-</script>
+// Диагональная таблица
+function displayDiagonalStats(filtered){
+  const diagStats={};
+  filtered.forEach(({name,serial,status})=>{
+    if(status!=="OK"&&status!=="NDF") return;
+    const diag = serial.substr(0,3); // упрощённо для примера
+    if(!diagStats[name]) diagStats[name]={};
+    diagStats[name][diag] = (diagStats[name][diag]||0)+1;
+  });
 
+  const tbody=document.querySelector('#diag-table tbody');
+  const thead=document.querySelector('#diag-table thead');
+  const allDiagonals=Array.from(new Set(Object.values(diagStats).flatMap(o=>Object.keys(o)))).sort();
+  thead.innerHTML=`<tr><th>NAME</th>${allDiagonals.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+  tbody.innerHTML="";
+  Object.entries(diagStats).forEach(([name,diags])=>{
+    const row=document.createElement('tr');
+    let sum=0;
+    const tdName=document.createElement('td'); tdName.textContent=name; row.appendChild(tdName);
+    allDiagonals.forEach(d=>{
+      const val=diags[d]||0; sum+=val;
+      const td=document.createElement('td'); td.textContent=val; row.appendChild(td);
+    });
+    const tdSum=document.createElement('td'); tdSum.textContent=sum; tdSum.className="sum-col"; row.appendChild(tdSum);
+    tbody.appendChild(row);
+  });
+}
+
+// Обновление таблиц
+async function updateStats(){
+  await fetchAndCacheData();
+  const lastDate=getLastDate(combinedDataCache);
+  const lastDateStr=lastDate.toISOString().split('T')[0];
+  document.getElementById('date-info').textContent=`DATE: ${lastDateStr}`;
+  const filtered=combinedDataCache.filter(r=>r.date.split(' ')[0]===lastDateStr);
+  displayCombinedStats(filtered);
+  displayDiagonalStats(filtered);
+}
+
+// Поиск серийника
+async function searchSerial(serial){
+  const sheet1 = await getData('FI Station KOVALCHYK Y.');
+  const sheet2 = await getData('FI Station 2 ULANOVYCH.R');
+  const combined=[...sheet1.slice(1),...sheet2.slice(1)];
+  const results = combined.filter(r=>r[2]===serial).map(r=>({
+    date:r[0]||"--", status:r[4]||"--", nameF:r[5]||"--", nameG:r[6]||"--", info:r[10]||"--"
+  })).slice(0,20);
+  return results;
+}
+
+document.getElementById('search').addEventListener('keypress',async(e)=>{
+  if(e.key==='Enter'){
+    const serial = e.target.value.trim();
+    const output = document.getElementById('search-result');
+    if(!serial){ output.innerHTML="<p style='color:red'>Podaj SN!</p>"; return; }
+    const data = await searchSerial(serial);
+    if(data.length>0){
+      let rows = data.map(d=>`<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('');
+      output.innerHTML=`<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } else output.innerHTML="<p style='color:yellow'>Brak info!</p>";
+  }
+});
+
+document.getElementById('overview-toggle').addEventListener('click',()=>{const t=document.getElementById('combined-table'); t.style.display=t.style.display==='none'?'table':'table';});
+document.getElementById('diag-toggle').addEventListener('click',()=>{const t=document.getElementById('diag-table'); t.style.display=t.style.display==='none'?'table':'table';});
+
+updateStats();
+setInterval(updateStats,25000);
+</script>
 </body>
 </html>
