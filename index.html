@@ -1,76 +1,423 @@
-<script>
-  async function showTooltip(e, name) {
-    const combinedData = await fetchData();
-    const lastDateStr = document.getElementById('date-info').textContent.split(' ')[1];
-
-    // Фильтруем записи по имени и текущей дате
-    const records = combinedData.filter(r => r.name === name && r.date?.split(' ')[0] === lastDateStr);
-
-    if (records.length === 0) return;
-
-    // Создаём таблицу для tooltip
-    let html = '<table style="border:1px solid #0ff; background:#222;"><tr><th>Serial</th><th>Status</th></tr>';
-    records.forEach(r => {
-      html += `<tr><td>${r.serial}</td><td>${r.status}</td></tr>`;
-    });
-    html += '</table>';
-
-    let tooltip = document.createElement('div');
-    tooltip.id = 'tooltip-table';
-    tooltip.style.position = 'absolute';
-    tooltip.style.background = '#333';
-    tooltip.style.border = '1px solid #0ff';
-    tooltip.style.padding = '10px';
-    tooltip.style.zIndex = '1000';
-    tooltip.innerHTML = html;
-    document.body.appendChild(tooltip);
-
-    function moveTooltip(event) {
-      tooltip.style.top = (event.pageY + 15) + 'px';
-      tooltip.style.left = (event.pageX + 15) + 'px';
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LCDR LIVE DATA</title>
+  <style>
+    body {
+      background: url('https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/circuit-board.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      font-family: Arial, sans-serif;
     }
 
-    moveTooltip(e);
-    e.target.addEventListener('mousemove', moveTooltip);
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: -1;
+    }
 
-    e.target.addEventListener('mouseout', () => {
-      tooltip.remove();
-    }, { once: true });
-  }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 10%;
+      background-color: rgba(17, 17, 17, 0.7);
+    }
+    .header h1 {
+      margin: 0;
+      color: #008080;
+      font-size: 24px;
+    }
+    .date-info {
+      color: #008080;
+      font-size: 24px;
+    }
+    .table-container {
+      width: 80%;
+      margin: 24px auto;
+    }
+    .table-button {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #008080;
+      color: #000;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      text-align: left;
+      padding-left: 20px;
+      margin-bottom: -1px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #555;
+      border-radius: 0 0 10px 10px;
+    }
+    table, th, td {
+      border: 1px solid #fff;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      font-weight: bold;
+      font-size: 16px;
+    }
+    td {
+      font-size: 16px;
+    }
+    .total-row {
+      font-weight: bold;
+      background-color: #333;
+      color: #008080;
+    }
+    .sum-col {
+      background-color: #222;
+      color: #0ff;
+    }
 
-  // Изменяем функцию displayCombinedStats для добавления tooltip
-  function displayCombinedStats(stats) {
-    const tbody = document.querySelector('#combined-table tbody');
-    tbody.innerHTML = '';
+    /* Поиск */
+    #search {
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin: 20px auto;
+      display: block;
+    }
+    #search-result {
+      margin-top: 15px;
+    }
+    #search-result table {
+      margin-top: 10px;
+      border: 2px solid #0ff;
+      background-color: #333;
+    }
+    #search-result th {
+      background-color: #008080;
+      color: #000;
+    }
+    #search-result td {
+      color: #0ff;
+    }
 
-    const totals = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
-    const sortedStats = Object.entries(stats).sort(([, a], [, b]) => b.OK - a.OK);
+    /* Tooltip */
+    #tooltip-table {
+      position: absolute;
+      background: #333;
+      border: 1px solid #0ff;
+      padding: 10px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>LCDR LIVE DATA 2025</h1>
+    <div class="date-info" id="date-info">DATE: --</div>
+  </div>
 
-    sortedStats.forEach(([name, data]) => {
-      const row = document.createElement('tr');
+  <!-- Поиск -->
+  <div class="table-container">
+    <input type="text" id="search" placeholder="Podaj SN (Enter)">
+    <div id="search-result"></div>
+  </div>
 
-      // Фамилия с tooltip
-      const nameTd = document.createElement('td');
-      nameTd.textContent = name;
-      nameTd.style.cursor = 'pointer';
-      nameTd.addEventListener('mouseover', e => showTooltip(e, name));
+  <!-- Первая таблица -->
+  <div class="table-container">
+    <button class="table-button" id="overview-toggle">FI Station Overview</button>
+    <table id="combined-table">
+      <thead>
+        <tr>
+          <th>NAME</th>
+          <th>NDF</th>
+          <th>OK</th>
+          <th>WAITING</th>
+          <th>SCRAP TTL</th>
+          <th>SCRAP PNLA</th>
+          <th>SUMA CALKOWITA</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      row.appendChild(nameTd);
-      row.innerHTML += `<td>${data.NDF}</td><td>${data.OK}</td><td>${data.WAITING}</td><td>${data['SCRAP TTL']}</td><td>${data['SCRAP PNLA']}</td><td>${data.total}</td>`;
+  <!-- Вторая таблица -->
+  <div class="table-container" id="diag-container">
+    <button class="table-button" id="diag-toggle">FI Station Diagonals</button>
+    <table id="diag-table">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      tbody.appendChild(row);
+  <script>
+    const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
+    const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
+    const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 
-      totals.NDF += data.NDF;
-      totals.OK += data.OK;
-      totals.WAITING += data.WAITING;
-      totals['SCRAP TTL'] += data['SCRAP TTL'];
-      totals['SCRAP PNLA'] += data['SCRAP PNLA'];
-      totals.total += data.total;
+    const diagonalMapPrefix = { 'WH8': 55, 'WC8': 32, 'WU0': 43, 'SQ1': 43, 'WM5': 50, 'WC7': 32, 'WP5': 65, 'WW1': 75, 'WM6': 50 };
+    const diagonalMapSuffix = {
+      '860': 86, '850': 85, '750': 75, '700': 70, '650': 65, '580': 58, '575': 58, '550': 55, '545': 55, '500': 50,
+      '498': 50, '495': 50, '490': 50, '438': 43, '435': 43, '430': 43, '428': 43, '425': 43, '420': 43, '418': 43,
+      '415': 43, '398': 43, '395': 43, '390': 43, '348': 32, '345': 32, '340': 32, '328': 32, '325': 32, '320': 32,
+      '318': 32, '315': 32, '278': 27, '275': 27, '270': 27, '248': 24, '245': 24, '240': 24, '238': 24, '235': 24, '230': 24
+    };
+
+    function extractDiagonal(serial) {
+      if (!serial || serial.length < 6) return null;
+      const prefix = serial.substr(0, 3);
+      if (diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
+      const suffix = serial.substr(3, 3);
+      if (diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
+      return null;
+    }
+
+    async function getData(sheetName) {
+      try {
+        const response = await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
+        if (!response.ok) throw new Error("API request failed");
+        const data = await response.json();
+        return data.values || [];
+      } catch (err) {
+        console.error(`Ошибка загрузки ${sheetName}:`, err);
+        return [];
+      }
+    }
+
+    async function fetchData() {
+      const sheet1Data = await getData('FI Station KOVALCHYK Y.');
+      const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
+      const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
+      return combined.map(row => ({
+        date: row[0],
+        serial: row[2],
+        status: row[4],
+        name: row[5]
+      }));
+    }
+
+    function getLastDate(data) {
+      const dates = data.map(record => {
+        const datePart = record.date?.split(' ')[0];
+        return datePart ? new Date(datePart) : new Date(0);
+      });
+      return new Date(Math.max(...dates));
+    }
+
+    function calculateStats(data) {
+      const stats = {};
+      data.forEach(({ name, status }) => {
+        if (!stats[name]) stats[name] = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
+        if (status === 'NDF') stats[name].NDF++;
+        if (status === 'OK') stats[name].OK++;
+        if (status === 'WAITING') stats[name].WAITING++;
+        if (status === 'SCRAP TTL') stats[name]['SCRAP TTL']++;
+        if (status === 'SCRAP PNLA') stats[name]['SCRAP PNLA']++;
+        stats[name].total++;
+      });
+      return stats;
+    }
+
+    function calculateDiagonalStats(data) {
+      const diagStats = {};
+      data.forEach(({ name, serial, status }) => {
+        if (status !== 'OK' && status !== 'NDF') return;
+        const diag = extractDiagonal(serial);
+        if (!diag) return;
+        if (!diagStats[name]) diagStats[name] = {};
+        diagStats[name][diag] = (diagStats[name][diag] || 0) + 1;
+      });
+      return diagStats;
+    }
+
+    // Tooltip при наведении
+    async function showTooltip(e, name) {
+      const combinedData = await fetchData();
+      const lastDateStr = document.getElementById('date-info').textContent.split(' ')[1];
+
+      const records = combinedData.filter(r => r.name === name && r.date?.split(' ')[0] === lastDateStr);
+      if (records.length === 0) return;
+
+      let html = '<table style="border:1px solid #0ff; background:#222;"><tr><th>Serial</th><th>Status</th></tr>';
+      records.forEach(r => {
+        html += `<tr><td>${r.serial}</td><td>${r.status}</td></tr>`;
+      });
+      html += '</table>';
+
+      let tooltip = document.createElement('div');
+      tooltip.id = 'tooltip-table';
+      tooltip.innerHTML = html;
+      document.body.appendChild(tooltip);
+
+      function moveTooltip(event) {
+        tooltip.style.top = (event.pageY + 15) + 'px';
+        tooltip.style.left = (event.pageX + 15) + 'px';
+      }
+
+      moveTooltip(e);
+      e.target.addEventListener('mousemove', moveTooltip);
+
+      e.target.addEventListener('mouseout', () => {
+        tooltip.remove();
+      }, { once: true });
+    }
+
+    // Отображение верхней таблицы с tooltip
+    function displayCombinedStats(stats) {
+      const tbody = document.querySelector('#combined-table tbody');
+      tbody.innerHTML = '';
+      const totals = { NDF: 0, OK: 0, WAITING: 0, 'SCRAP TTL': 0, 'SCRAP PNLA': 0, total: 0 };
+      const sortedStats = Object.entries(stats).sort(([, a], [, b]) => b.OK - a.OK);
+
+      sortedStats.forEach(([name, data]) => {
+        const row = document.createElement('tr');
+
+        const nameTd = document.createElement('td');
+        nameTd.textContent = name;
+        nameTd.style.cursor = 'pointer';
+        nameTd.addEventListener('mouseover', e => showTooltip(e, name));
+        row.appendChild(nameTd);
+
+        row.innerHTML += `<td>${data.NDF}</td><td>${data.OK}</td><td>${data.WAITING}</td><td>${data['SCRAP TTL']}</td><td>${data['SCRAP PNLA']}</td><td>${data.total}</td>`;
+        tbody.appendChild(row);
+
+        totals.NDF += data.NDF;
+        totals.OK += data.OK;
+        totals.WAITING += data.WAITING;
+        totals['SCRAP TTL'] += data['SCRAP TTL'];
+        totals['SCRAP PNLA'] += data['SCRAP PNLA'];
+        totals.total += data.total;
+      });
+
+      const totalRow = document.createElement('tr');
+      totalRow.className = 'total-row';
+      totalRow.innerHTML = `<td>SUMA</td><td>${totals.NDF}</td><td>${totals.OK}</td><td>${totals.WAITING}</td><td>${totals['SCRAP TTL']}</td><td>${totals['SCRAP PNLA']}</td><td>${totals.total}</td>`;
+      tbody.appendChild(totalRow);
+    }
+
+    function displayDiagonalStats(diagStats) {
+      const tbody = document.querySelector('#diag-table tbody');
+      const thead = document.querySelector('#diag-table thead');
+      const allDiagonals = Array.from(new Set(Object.values(diagStats).flatMap(obj => Object.keys(obj)))).sort((a,b)=>Number(a)-Number(b));
+
+      thead.innerHTML = `<tr><th>NAME</th>${allDiagonals.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+      tbody.innerHTML = '';
+
+      Object.entries(diagStats).forEach(([name, diagonals])=>{
+        const row = document.createElement('tr');
+        let rowHTML = `<td>${name}</td>`;
+        let rowSum = 0;
+        allDiagonals.forEach(diag=>{
+          const val = diagonals[diag]||0;
+          rowSum += val;
+          rowHTML += `<td>${val}</td>`;
+        });
+        rowHTML += `<td class="sum-col">${rowSum}</td>`;
+        row.innerHTML = rowHTML;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function updateStats() {
+      const combinedData = await fetchData();
+      const lastDate = getLastDate(combinedData);
+      const lastDateStr = lastDate.toISOString().split('T')[0];
+
+      const filtered = combinedData.filter(record => record.date?.split(' ')[0] === lastDateStr);
+      const stats = calculateStats(filtered);
+      const diagStats = calculateDiagonalStats(filtered);
+
+      displayCombinedStats(stats);
+      displayDiagonalStats(diagStats);
+
+      document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
+    }
+
+    document.getElementById('overview-toggle').addEventListener('click', () => {
+      const table = document.getElementById('combined-table');
+      table.style.display = table.style.display === 'none' ? 'table' : 'none';
+    });
+    document.getElementById('diag-toggle').addEventListener('click', () => {
+      const table = document.getElementById('diag-table');
+      table.style.display = table.style.display === 'none' ? 'table' : 'none';
     });
 
-    const totalRow = document.createElement('tr');
-    totalRow.className = 'total-row';
-    totalRow.innerHTML = `<td>SUMA</td><td>${totals.NDF}</td><td>${totals.OK}</td><td>${totals.WAITING}</td><td>${totals['SCRAP TTL']}</td><td>${totals['SCRAP PNLA']}</td><td>${totals.total}</td>`;
-    tbody.appendChild(totalRow);
-  }
-</script>
+    setInterval(updateStats, 25000);
+    updateStats();
+
+    // Поиск
+    async function searchSerial(serial) {
+      const sheet1Data = await getData('FI Station KOVALCHYK Y.');
+      const sheet2Data = await getData('FI Station 2 ULANOVYCH.R');
+      const combined = [...sheet1Data.slice(1), ...sheet2Data.slice(1)];
+
+      let results = combined.filter(row => row[2] === serial);
+      results = results.map(row => ({
+        date: row[0]||"--",
+        status: row[4]||"--",
+        nameF: row[5]||"--",
+        nameG: row[6]||"--",
+        info: row[10]||"--"
+      }));
+
+      results.sort((a,b)=>new Date(b.date)-new Date(a.date));
+      return results.slice(0,20);
+    }
+
+    document.getElementById('search').addEventListener('keypress', async (e)=>{
+      if(e.key==='Enter'){
+        const serial = e.target.value.trim();
+        const output = document.getElementById('search-result');
+
+        if(!serial){
+          output.innerHTML="<p style='color:red'>Podaj SN!</p>";
+          return;
+        }
+
+        const data = await searchSerial(serial);
+        if(data.length>0){
+          let rows = data.map(d=>`
+            <tr>
+              <td>${d.date}</td>
+              <td>${d.status}</td>
+              <td>${d.nameF}</td>
+              <td>${d.nameG}</td>
+              <td>${d.info}</td>
+            </tr>
+          `).join('');
+          output.innerHTML=`
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Status</th>
+                  <th>NAPRAWIACZ</th>
+                  <th>FINALNA</th>
+                  <th>INFO</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          `;
+        }else{
+          output.innerHTML="<p style='color:yellow'>Brak info!</p>";
+        }
+      }
+    });
+  </script>
+</body>
+</html>
