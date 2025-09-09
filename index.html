@@ -90,31 +90,6 @@
       background-color: #222;
       color: #0ff;
     }
-    /* Поиск */
-    #search {
-      width: 80%;
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      margin: 20px auto;
-      display: block;
-    }
-    #search-result {
-      margin-top: 15px;
-    }
-    #search-result table {
-      margin-top: 10px;
-      border: 2px solid #0ff;
-      background-color: #333;
-    }
-    #search-result th {
-      background-color: #008080;
-      color: #000;
-    }
-    #search-result td {
-      color: #0ff;
-    }
     /* Tooltip */
     .tooltip {
       position: absolute;
@@ -183,11 +158,6 @@
   <div class="header">
     <h1>LCDR LIVE DATA 2025</h1>
     <div class="date-info" id="date-info">DATE: --</div>
-  </div>
-
-  <div class="table-container">
-    <input type="text" id="search" placeholder="Podaj SN (Enter)">
-    <div id="search-result"></div>
   </div>
 
   <div class="table-container">
@@ -269,6 +239,18 @@
     return stats;
   }
 
+  function calculateDiagonalStats(data) {
+    const diagStats = {};
+    data.forEach(({ name, serial, status }) => {
+      if (status !== 'OK' && status !== 'NDF') return;
+      const diag = serial?.substr(3,3);
+      if (!diag) return;
+      if (!diagStats[name]) diagStats[name] = {};
+      diagStats[name][diag] = (diagStats[name][diag] || 0) + 1;
+    });
+    return diagStats;
+  }
+
   async function getWorkerSerials(workerName, limit = null) {
     const combinedData = await fetchData();
     const lastDate = getLastDate(combinedData);
@@ -336,22 +318,64 @@
     attachHoverAndClickEvents();
   }
 
+  function displayDiagonalStats(diagStats) {
+    let container = document.getElementById('diag-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'table-container';
+      container.id = 'diag-container';
+      container.innerHTML = `<button class="table-button">Диагонали</button><table><thead></thead><tbody></tbody></table>`;
+      document.body.appendChild(container);
+    }
+
+    const allDiags = Array.from(new Set(Object.values(diagStats).flatMap(d => Object.keys(d)))).sort((a,b) => Number(a)-Number(b));
+    const thead = container.querySelector('thead');
+    const tbody = container.querySelector('tbody');
+
+    thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+    tbody.innerHTML = '';
+
+    Object.entries(diagStats).forEach(([name, diags]) => {
+      let rowHTML = `<td>${name}</td>`;
+      let sum = 0;
+      allDiags.forEach(d => {
+        const val = diags[d]||0;
+        sum += val;
+        rowHTML += `<td>${val}</td>`;
+      });
+      rowHTML += `<td class="sum-col">${sum}</td>`;
+      const row = document.createElement('tr');
+      row.innerHTML = rowHTML;
+      tbody.appendChild(row);
+    });
+
+    let totalHTML = `<td>SUMA</td>`;
+    let totalSum = 0;
+    allDiags.forEach(d=>{
+      const s = Object.values(diagStats).reduce((acc,obj)=>acc+(obj[d]||0),0);
+      totalSum += s;
+      totalHTML += `<td>${s}</td>`;
+    });
+    totalHTML += `<td class="sum-col">${totalSum}</td>`;
+    const totalRow = document.createElement('tr');
+    totalRow.className='total-row';
+    totalRow.innerHTML=totalHTML;
+    tbody.appendChild(totalRow);
+  }
+
   function attachHoverAndClickEvents() {
     const tooltip = document.getElementById('tooltip');
     const modal = document.getElementById('modal');
     const modalContent = document.getElementById('modal-content');
-    const closeModal = document.getElementById('close-modal');
 
     document.querySelectorAll('.clickable-name').forEach(cell => {
       const workerName = cell.dataset.name;
 
-      // Hover (tooltip)
       cell.addEventListener('mouseenter', async (e) => {
         tooltip.innerHTML = `<p style="color:yellow">Загрузка...</p>`;
         tooltip.style.display = 'block';
         tooltip.style.left = (e.pageX + 15) + 'px';
         tooltip.style.top = (e.pageY + 15) + 'px';
-
         const content = await getWorkerSerials(workerName, 10);
         tooltip.innerHTML = `<b>${workerName}</b><br>${content}`;
       });
@@ -365,16 +389,12 @@
         tooltip.style.display = 'none';
       });
 
-      // Click (modal)
       cell.addEventListener('click', async () => {
         modal.style.display = 'flex';
         modalContent.innerHTML = `<button class="close-btn" id="close-modal">Закрыть</button><h2>${workerName}</h2><p style="color:yellow">Загрузка...</p>`;
         const content = await getWorkerSerials(workerName);
         modalContent.innerHTML = `<button class="close-btn" id="close-modal">Закрыть</button><h2>${workerName}</h2>${content}`;
-
-        document.getElementById('close-modal').onclick = () => {
-          modal.style.display = 'none';
-        };
+        document.getElementById('close-modal').onclick = () => modal.style.display = 'none';
       });
     });
   }
@@ -383,14 +403,13 @@
     const combinedData = await fetchData();
     const lastDate = getLastDate(combinedData);
     const lastDateStr = lastDate.toISOString().split('T')[0];
-
-    const filtered = combinedData.filter(record => {
-      const recDate = record.date?.split(' ')[0] || '';
-      return recDate === lastDateStr;
-    });
+    const filtered = combinedData.filter(r => (r.date?.split(' ')[0]||'')===lastDateStr);
 
     const stats = calculateStats(filtered);
+    const diagStats = calculateDiagonalStats(filtered);
+
     displayCombinedStats(stats);
+    displayDiagonalStats(diagStats);
     document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
   }
 
