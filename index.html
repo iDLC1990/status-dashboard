@@ -55,10 +55,15 @@
 
   /* Модалка */
   #modal {
-    display:none; position:fixed; top:0; left:0;
-    width:100%; height:100%; background: rgba(0,0,0,0.7);
-    justify-content:center; align-items:center; z-index:10000;
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.7);
+    justify-content:center; align-items:center;
+    z-index:10000;
   }
+  #modal.show { display:flex; }
   #modal-content {
     background:#222; color:#0ff; padding:20px;
     border:2px solid #0ff; border-radius:10px; max-height:80%; overflow:auto;
@@ -72,49 +77,49 @@
 </style>
 </head>
 <body>
-  <div class="header">
-    <h1>LCDR LIVE DATA 2025</h1>
-    <div class="date-info" id="date-info">DATE: --</div>
-  </div>
+<div class="header">
+  <h1>LCDR LIVE DATA 2025</h1>
+  <div class="date-info" id="date-info">DATE: --</div>
+</div>
 
-  <div class="table-container">
-    <input type="text" id="search" placeholder="Podaj SN (Enter)">
-    <div id="search-result"></div>
-  </div>
+<div class="table-container">
+  <input type="text" id="search" placeholder="Podaj SN (Enter)">
+  <div id="search-result"></div>
+</div>
 
-  <div class="table-container">
-    <button class="table-button" id="overview-toggle">FI Station Overview</button>
-    <table id="combined-table">
-      <thead>
-        <tr>
-          <th>NAME</th>
-          <th>NDF</th>
-          <th>OK</th>
-          <th>WAITING</th>
-          <th>SCRAP TTL</th>
-          <th>SCRAP PNLA</th>
-          <th>SUMA CALKOWITA</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+<div class="table-container">
+  <button class="table-button" id="overview-toggle">FI Station Overview</button>
+  <table id="combined-table">
+    <thead>
+      <tr>
+        <th>NAME</th>
+        <th>NDF</th>
+        <th>OK</th>
+        <th>WAITING</th>
+        <th>SCRAP TTL</th>
+        <th>SCRAP PNLA</th>
+        <th>SUMA CALKOWITA</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
-  <div class="table-container" id="diag-container">
-    <button class="table-button" id="diag-toggle">FI Station Diagonals</button>
-    <table id="diag-table">
-      <thead></thead>
-      <tbody></tbody>
-    </table>
-  </div>
+<div class="table-container" id="diag-container">
+  <button class="table-button" id="diag-toggle">FI Station Diagonals</button>
+  <table id="diag-table">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+</div>
 
-  <!-- Модалка -->
-  <div id="modal">
-    <div id="modal-content">
-      <button id="modal-close">Закрыть</button>
-      <div id="modal-body"></div>
-    </div>
+<!-- Модалка -->
+<div id="modal">
+  <div id="modal-content">
+    <button id="modal-close">Закрыть</button>
+    <div id="modal-body"></div>
   </div>
+</div>
 
 <script>
 const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
@@ -186,22 +191,26 @@ function calculateDiagonalStats(data){
 }
 
 // Модалка
+const modal=document.getElementById('modal');
+const modalBody=document.getElementById('modal-body');
+const modalClose=document.getElementById('modal-close');
+
 function openModal(name){
   const lastDateStr=document.getElementById('date-info').textContent.split(' ')[1];
   const records=combinedDataCache.filter(r=>r.name===name && r.date?.split(' ')[0]===lastDateStr);
-  if(records.length===0) return;
-
-  let html='<table><tr><th>Serial</th><th>Status</th></tr>';
-  records.forEach(r=>{ html+=`<tr><td>${r.serial}</td><td>${r.status}</td></tr>`; });
-  html+='</table>';
-
-  document.getElementById('modal-body').innerHTML=html;
-  document.getElementById('modal').style.display='flex';
+  if(records.length===0){
+    modalBody.innerHTML="<p>Нет данных за текущий день</p>";
+  } else {
+    let html='<table><tr><th>Serial</th><th>Status</th></tr>';
+    records.forEach(r=>{ html+=`<tr><td>${r.serial}</td><td>${r.status}</td></tr>`; });
+    html+='</table>';
+    modalBody.innerHTML=html;
+  }
+  modal.classList.add('show');
 }
 
-document.getElementById('modal-close').addEventListener('click',()=>{
-  document.getElementById('modal').style.display='none';
-});
+modalClose.addEventListener('click',()=> modal.classList.remove('show'));
+modal.addEventListener('click', e => { if(e.target===modal) modal.classList.remove('show'); });
 
 // Верхняя таблица
 function displayCombinedStats(stats){
@@ -217,7 +226,6 @@ function displayCombinedStats(stats){
     nameTd.style.cursor='pointer';
     nameTd.addEventListener('click',()=>openModal(name));
     row.appendChild(nameTd);
-
     row.innerHTML+=`<td>${data.NDF}</td><td>${data.OK}</td><td>${data.WAITING}</td><td>${data['SCRAP TTL']}</td><td>${data['SCRAP PNLA']}</td><td>${data.total}</td>`;
     tbody.appendChild(row);
 
@@ -268,11 +276,11 @@ async function updateStats(){
 
 document.getElementById('overview-toggle').addEventListener('click',()=>{
   const table=document.getElementById('combined-table');
-  table.style.display=table.style.display==='none'?'table':'none';
+  table.style.display=table.style.display==='none'?'table':'table';
 });
 document.getElementById('diag-toggle').addEventListener('click',()=>{
   const table=document.getElementById('diag-table');
-  table.style.display=table.style.display==='none'?'table':'none';
+  table.style.display=table.style.display==='none'?'table':'table';
 });
 
 setInterval(updateStats,25000);
