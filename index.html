@@ -10,7 +10,7 @@ body {
   background-size: cover;
   color:#fff;
   font-family: Arial, sans-serif;
-  transition: background-image 1s ease-in-out; /* плавная смена фона */
+  transition: background 1s ease-in-out; /* плавная смена фона */
 }
 body::before {
   content:"";
@@ -326,10 +326,11 @@ let bgIndex = 0;
 
 function changeBackground() {
   bgIndex = (bgIndex + 1) % backgrounds.length;
-  document.body.style.backgroundImage = `url('${backgrounds[bgIndex]}')`;
+  document.body.style.background = `url('${backgrounds[bgIndex]}') no-repeat center center fixed`;
+  document.body.style.backgroundSize = "cover";
 }
 
-// каждые 3 минуты (180 000 мс)
+// каждые 3 минуты (180000 мс)
 setInterval(changeBackground, 180000);
 </script>
 </body>
