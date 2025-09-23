@@ -10,6 +10,7 @@ body {
   background-size: cover;
   color:#fff;
   font-family: Arial, sans-serif;
+  transition: background-image 1s ease-in-out; /* плавная смена фона */
 }
 body::before {
   content:"";
@@ -303,6 +304,33 @@ document.getElementById('diag-toggle').addEventListener('click',()=>{
 
 updateStats();
 setInterval(updateStats,25000);
+
+// ==================== ФОН ====================
+const backgrounds = [
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-1526713.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-gochrisgoxyz-1643409.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-iriser-1366957.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joshkjack-135018.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-326055.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rickyrecap-2627063.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rpnickson-2478248.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sanaan-3075993.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-simon73-1183099.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
+];
+
+let bgIndex = 0;
+
+function changeBackground() {
+  bgIndex = (bgIndex + 1) % backgrounds.length;
+  document.body.style.backgroundImage = `url('${backgrounds[bgIndex]}')`;
+}
+
+// каждые 3 минуты (180 000 мс)
+setInterval(changeBackground, 180000);
 </script>
 </body>
 </html>
