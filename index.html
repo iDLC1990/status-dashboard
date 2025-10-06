@@ -10,7 +10,7 @@ body {
   background-size: cover;
   color:#fff;
   font-family: Arial, sans-serif;
-  transition: background 1s ease-in-out; /* плавная смена фона */
+  transition: background 1s ease-in-out;
 }
 body::before {
   content:"";
@@ -33,10 +33,7 @@ body::before {
   font-size:24px;
 }
 .date-info { color:#008080; font-size:24px; }
-
 .table-container { width:80%; margin:24px auto; }
-
-/* Заголовки таблиц */
 .table-header {
   background-color:#008080;
   color:#000;
@@ -45,8 +42,6 @@ body::before {
   padding:10px 16px;
   border-radius:10px 10px 0 0;
 }
-
-/* Кнопки скрытия */
 .toggle-btn {
   margin:8px 0;
   font-size:20px;
@@ -55,7 +50,6 @@ body::before {
   border:none;
   color:#0ff;
 }
-
 table {
   width:100%;
   border-collapse:collapse;
@@ -66,10 +60,8 @@ table, th, td { border:1px solid #fff; }
 th, td { padding:10px; text-align:center; }
 th { font-weight:bold; font-size:16px; }
 td { font-size:16px; cursor:pointer; }
-
 .total-row { font-weight:bold; background-color:#333; color:#008080; }
 .sum-col { background-color:#222; color:#0ff; }
-
 #search {
   width:80%; padding:12px; font-size:16px;
   border-radius:5px; border:none;
@@ -81,7 +73,6 @@ td { font-size:16px; cursor:pointer; }
 }
 #search-result th { background-color:#008080; color:#000; }
 #search-result td { color:#0ff; }
-
 /* Модалка */
 #modal {
   display:none; position:fixed; top:0; left:0;
@@ -184,7 +175,15 @@ async function getData(sheetName){
 async function fetchAndCacheData(){
   const sheet1=await getData('FI Station KOVALCHYK Y.');
   const sheet2=await getData('FI Station 2 ULANOVYCH.R');
-  combinedDataCache=[...sheet1.slice(1),...sheet2.slice(1)].map(r=>({ date:r[0]||"", serial:r[2]||"", status:r[4]||"", name:r[5]||"" }));
+  // теперь добавляем колонки J и K (индексы 9 и 10)
+  combinedDataCache=[...sheet1.slice(1),...sheet2.slice(1)].map(r=>({
+    date:r[0]||"",
+    serial:r[2]||"",
+    status:r[4]||"",
+    name:r[5]||"",
+    ocAfterRepair:r[9]||"", // J
+    comment:r[10]||""        // K
+  }));
   return combinedDataCache;
 }
 
@@ -202,11 +201,15 @@ modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove(
 function openModal(name){
   const lastDateStr=document.getElementById('date-info').textContent.split(' ')[1];
   const records=combinedDataCache.filter(r=>r.name===name && r.date.split(' ')[0]===lastDateStr);
-  if(records.length===0){ modalBody.innerHTML="<p>Нет данных за текущий день</p>"; }
-  else{
-    let html='<table><tr><th>Serial</th><th>Status</th></tr>';
-    records.forEach(r=>html+=`<tr><td>${r.serial}</td><td>${r.status}</td></tr>`);
-    html+='</table>'; modalBody.innerHTML=html;
+  if(records.length===0){ 
+    modalBody.innerHTML="<p>Нет данных за текущий день</p>"; 
+  } else {
+    let html='<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
+    records.forEach(r=>{
+      html+=`<tr><td>${r.serial}</td><td>${r.status}</td><td>${r.ocAfterRepair}</td><td>${r.comment}</td></tr>`;
+    });
+    html+='</table>'; 
+    modalBody.innerHTML=html;
   }
   modal.classList.add('show');
 }
@@ -272,7 +275,13 @@ async function searchSerial(serial){
   const sheet1=await getData('FI Station KOVALCHYK Y.');
   const sheet2=await getData('FI Station 2 ULANOVYCH.R');
   const combined=[...sheet1.slice(1),...sheet2.slice(1)];
-  return combined.filter(r=>r[2]===serial).map(r=>({date:r[0]||"--",status:r[4]||"--",nameF:r[5]||"--",nameG:r[6]||"--",info:r[10]||"--"})).slice(0,20);
+  return combined.filter(r=>r[2]===serial).map(r=>({
+    date:r[0]||"--",
+    status:r[4]||"--",
+    nameF:r[5]||"--",
+    nameG:r[6]||"--",
+    info:r[10]||"--"
+  })).slice(0,20);
 }
 
 document.getElementById('search').addEventListener('keypress',async(e)=>{
@@ -305,7 +314,7 @@ document.getElementById('diag-toggle').addEventListener('click',()=>{
 updateStats();
 setInterval(updateStats,25000);
 
-// ==================== ФОН ====================
+// Смена фона
 const backgrounds = [
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
@@ -347,16 +356,12 @@ const backgrounds = [
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg",
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
 ];
-
 let bgIndex = 0;
-
 function changeBackground() {
   bgIndex = (bgIndex + 1) % backgrounds.length;
   document.body.style.background = `url('${backgrounds[bgIndex]}') no-repeat center center fixed`;
   document.body.style.backgroundSize = "cover";
 }
-
-// каждые 3 минуты (180000 мс)
 setInterval(changeBackground, 180000);
 </script>
 </body>
