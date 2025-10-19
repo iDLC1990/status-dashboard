@@ -42,14 +42,6 @@ body::before {
   padding:10px 16px;
   border-radius:10px 10px 0 0;
 }
-.toggle-btn {
-  margin:8px 0;
-  font-size:20px;
-  cursor:pointer;
-  background:none;
-  border:none;
-  color:#0ff;
-}
 table {
   width:100%;
   border-collapse:collapse;
@@ -60,8 +52,6 @@ table, th, td { border:1px solid #fff; }
 th, td { padding:10px; text-align:center; }
 th { font-weight:bold; font-size:16px; }
 td { font-size:16px; cursor:pointer; }
-.total-row { font-weight:bold; background-color:#333; color:#008080; }
-.sum-col { background-color:#222; color:#0ff; }
 #search {
   width:80%; padding:12px; font-size:16px;
   border-radius:5px; border:none;
@@ -112,31 +102,16 @@ td { font-size:16px; cursor:pointer; }
 
 <!-- FI Station Overview -->
 <div class="table-container">
-  <button id="overview-toggle" class="toggle-btn">👁</button>
-  <div id="overview-block">
-    <div class="table-header">FI Station Overview</div>
-    <table id="combined-table">
-      <thead>
-        <tr>
-          <th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th>
-          <th>SCRAP TTL</th><th>SCRAP PNLA</th><th>SUMA CALKOWITA</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- FI Station Diagonals -->
-<div class="table-container">
-  <button id="diag-toggle" class="toggle-btn">👁</button>
-  <div id="diag-block">
-    <div class="table-header">FI Station Diagonals</div>
-    <table id="diag-table">
-      <thead></thead>
-      <tbody></tbody>
-    </table>
-  </div>
+  <div class="table-header">FI Station Overview</div>
+  <table id="combined-table">
+    <thead>
+      <tr>
+        <th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th>
+        <th>SCRAP TTL</th><th>SCRAP PNLA</th><th>SUMA CALKOWITA</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 
 <!-- Модалка -->
@@ -153,16 +128,6 @@ const sheetId='10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
 const sheetURL=`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
 let combinedDataCache=[];
 
-const diagonalMapPrefix={ 'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50 };
-const diagonalMapSuffix={ '860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24};
-
-function extractDiagonal(serial){
-  if(!serial || serial.length<6) return null;
-  const prefix=serial.substr(0,3); if(diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
-  const suffix=serial.substr(3,3); if(diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
-  return null;
-}
-
 async function getData(sheetName){
   try{
     const res=await fetch(`${sheetURL}${sheetName}?key=${apiKey}`);
@@ -175,16 +140,14 @@ async function getData(sheetName){
 async function fetchAndCacheData(){
   const sheet1=await getData('FI Station KOVALCHYK Y.');
   const sheet2=await getData('FI Station 2 ULANOVYCH.R');
-  // теперь добавляем колонки J и K (индексы 9 и 10)
   combinedDataCache=[...sheet1.slice(1),...sheet2.slice(1)].map(r=>({
     date:r[0]||"",
     serial:r[2]||"",
     status:r[4]||"",
     name:r[5]||"",
-    ocAfterRepair:r[9]||"", // J
-    comment:r[10]||""        // K
+    ocAfterRepair:r[9]||"",
+    comment:r[10]||""
   }));
-  return combinedDataCache;
 }
 
 function getLastDate(data){
@@ -236,29 +199,6 @@ function displayCombinedStats(filtered){
   }
 }
 
-// Нижняя таблица диагоналей
-function displayDiagonalStats(filtered){
-  const diagStats={};
-  filtered.forEach(({name,serial,status})=>{
-    if(status!=="OK" && status!=="NDF") return;
-    const diag=extractDiagonal(serial); if(!diag) return;
-    if(!diagStats[name]) diagStats[name]={};
-    diagStats[name][diag]=(diagStats[name][diag]||0)+1;
-  });
-  const tbody=document.querySelector('#diag-table tbody');
-  const thead=document.querySelector('#diag-table thead');
-  const allDiagonals=Array.from(new Set(Object.values(diagStats).flatMap(o=>Object.keys(o)))).sort((a,b)=>a-b);
-  thead.innerHTML=`<tr><th>NAME</th>${allDiagonals.map(d=>`<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
-  tbody.innerHTML="";
-  Object.entries(diagStats).forEach(([name,diags])=>{
-    const row=document.createElement('tr'); let sum=0;
-    const tdName=document.createElement('td'); tdName.textContent=name; row.appendChild(tdName);
-    allDiagonals.forEach(d=>{ const val=diags[d]||0; sum+=val; const td=document.createElement('td'); td.textContent=val; row.appendChild(td); });
-    const tdSum=document.createElement('td'); tdSum.textContent=sum; tdSum.className="sum-col"; row.appendChild(tdSum);
-    tbody.appendChild(row);
-  });
-}
-
 // Обновление данных
 async function updateStats(){
   await fetchAndCacheData();
@@ -267,7 +207,6 @@ async function updateStats(){
   document.getElementById('date-info').textContent=`DATE: ${lastDateStr}`;
   const filtered=combinedDataCache.filter(r=>r.date.split(' ')[0]===lastDateStr);
   displayCombinedStats(filtered);
-  displayDiagonalStats(filtered);
 }
 
 // Поиск
@@ -297,24 +236,10 @@ document.getElementById('search').addEventListener('keypress',async(e)=>{
   }
 });
 
-// Кнопки скрытия блоков
-document.getElementById('overview-toggle').addEventListener('click',()=>{
-  const block=document.getElementById('overview-block');
-  const btn=document.getElementById('overview-toggle');
-  if(block.style.display==='none'){ block.style.display='block'; btn.textContent='👁'; }
-  else{ block.style.display='none'; btn.textContent='🚫'; }
-});
-document.getElementById('diag-toggle').addEventListener('click',()=>{
-  const block=document.getElementById('diag-block');
-  const btn=document.getElementById('diag-toggle');
-  if(block.style.display==='none'){ block.style.display='block'; btn.textContent='👁'; }
-  else{ block.style.display='none'; btn.textContent='🚫'; }
-});
-
 updateStats();
 setInterval(updateStats,25000);
 
-// Смена фона
+// Смена фонов
 const backgrounds = [
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
@@ -329,31 +254,31 @@ const backgrounds = [
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sanaan-3075993.jpg",
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-simon73-1183099.jpg",
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pengwhan-1767434.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harry-shum-17627821-15984177.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-am83-12709111.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-njeromin-12766489.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-533923.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-robshumski-1903702.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-elti-meshau-107925-333850.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harun-tan-2311991-3980364.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joyston-judah-331625-933054.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-464336.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-326055.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-35857.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jahoo-388415.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-therato-1933320.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2166711.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thanhhoa-tran-640546-1462892.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jplenio-3131634.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2563129.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-david-bartus-43782-2379653.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-dreamypixel-547114.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sebastiaan9977-1097456.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-souvenirpixels-1519088.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pengwhan-1767434.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harry-shum-17627821-15984177.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-am83-12709111.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-njeromin-12766489.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-533923.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-robshumski-1903702.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-elti-meshau-107925-333850.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harun-tan-2311991-3980364.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joyston-judah-331625-933054.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-464336.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-326055.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-35857.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jahoo-388415.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-therato-1933320.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2166711.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thanhhoa-tran-640546-1462892.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jplenio-3131634.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2563129.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-david-bartus-43782-2379653.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-dreamypixel-547114.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sebastiaan9977-1097456.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-souvenirpixels-1519088.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
+  "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg",
   "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
 ];
 let bgIndex = 0;
