@@ -54,7 +54,7 @@
     #modal table { width:100%; border-collapse:collapse; }
     #modal th, #modal td { border:1px solid #0ff; padding:8px; text-align:center; }
     #modal th { background:#008080; color:#000; }
-    /* Небольшая адаптивность */
+    /* Адаптивность */
     @media (max-width: 900px) {
       .table-container { width:95%; }
       .header { padding:12px 4%; }
@@ -110,287 +110,221 @@
   </div>
 
   <script>
-    // Конфигурация Google Sheets (оставлена твоя — при желании можно вынести)
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
-    const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
-    const sheetURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/`;
+    const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU'; // первая таблица
+    const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8'; // вторая таблица (лист 2024)
 
-    // Кэш данных
-    let combinedDataCache = [];
-
-    const diagonalMapPrefix = {
-      'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50
-    };
-    const diagonalMapSuffix = {
-      '860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24
-    };
-
-    function extractDiagonal(serial) {
-      if (!serial || typeof serial !== 'string') return null;
-      // Обычные варианты: 6+ символов; пробуем выделить префикс и суффикс
-      const s = serial.trim();
-      if (s.length >= 3) {
-        const prefix = s.substr(0,3);
-        if (diagonalMapPrefix[prefix]) return diagonalMapPrefix[prefix];
-      }
-      if (s.length >= 6) {
-        const suffix = s.substr(3,3);
-        if (diagonalMapSuffix[suffix]) return diagonalMapSuffix[suffix];
-      }
-      // Попробуем взять последние 3 цифры
-      const last3 = s.slice(-3);
-      if (diagonalMapSuffix[last3]) return diagonalMapSuffix[last3];
-      return null;
+    function buildSheetURL(spreadsheetId, sheetName) {
+      return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
     }
 
-    async function getData(sheetName) {
+    async function getData(sheetName, spreadsheetId = sheetId) {
       try {
-        const url = `${sheetURL}${encodeURIComponent(sheetName)}?key=${apiKey}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Ошибка API: ' + res.status + ' ' + res.statusText);
+        const res = await fetch(buildSheetURL(spreadsheetId, sheetName));
+        if (!res.ok) throw new Error(res.statusText);
         const data = await res.json();
         return data.values || [];
-      } catch (err) {
-        console.error('getData error', err);
+      } catch(e) {
+        console.error(e);
         return [];
       }
     }
 
-    async function fetchAndCacheData() {
-      const sheet1 = await getData('FI Station KOVALCHYK Y.');
-      const sheet2 = await getData('FI Station 2 ULANOVYCH.R');
+    let combinedDataCache = [];
 
-      // Пропускаем заголовки
-      const rows = [...(sheet1.slice(1) || []), ...(sheet2.slice(1) || [])];
+    const diagonalMapPrefix = {'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50};
+    const diagonalMapSuffix = {'860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24};
 
-      combinedDataCache = rows.map(r => ({
-        date: r[0] || "",
-        serial: r[2] || "",
-        status: r[4] || "",
-        name: r[5] || "",
-        ocAfterRepair: r[9] || "",
-        comment: r[10] || ""
-      }));
-
-      return combinedDataCache;
-    }
-
-    function parseDatePart(val) {
-      if (!val) return null;
-      // Ожидаем формат "YYYY-MM-DD ..." или "DD.MM.YYYY ..." — постараемся корректно обработать
-      const firstPart = (typeof val === 'string') ? val.split(' ')[0].trim() : '';
-      // Если формат YYYY-MM-DD
-      if (/^\d{4}-\d{2}-\d{2}$/.test(firstPart)) return new Date(firstPart);
-      // Если формат DD.MM.YYYY
-      if (/^\d{2}\.\d{2}\.\d{4}$/.test(firstPart)) {
-        const [d,m,y] = firstPart.split('.');
-        return new Date(`${y}-${m}-${d}`);
-      }
-      // Попробуем Date.parse
-      const parsed = Date.parse(firstPart);
-      if (!isNaN(parsed)) return new Date(parsed);
+    function extractDiagonal(serial) {
+      if(!serial) return null;
+      const s = serial.trim();
+      if(s.length>=3 && diagonalMapPrefix[s.substr(0,3)]) return diagonalMapPrefix[s.substr(0,3)];
+      if(s.length>=6 && diagonalMapSuffix[s.substr(3,3)]) return diagonalMapSuffix[s.substr(3,3)];
+      const last3 = s.slice(-3);
+      if(diagonalMapSuffix[last3]) return diagonalMapSuffix[last3];
       return null;
     }
 
-    function getLastDate(data) {
-      const dates = data.map(r => {
-        const d = parseDatePart(r.date);
-        return d && !isNaN(d) ? d : null;
-      }).filter(d => d !== null);
-      if (dates.length === 0) return new Date();
-      return new Date(Math.max(...dates.map(d => d.getTime())));
+    async function fetchAndCacheData() {
+      const sheet1 = await getData('FI Station KOVALCHYK Y.', sheetId);
+      const sheet2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
+      const sheet3 = await getData('2024', sheetIdArchive);
+      const rows = [...(sheet1.slice(1)||[]), ...(sheet2.slice(1)||[]), ...(sheet3.slice(1)||[])];
+
+      combinedDataCache = rows.map(r=>({
+        date: r[0]||"",
+        serial: r[2]||"",
+        status: r[4]||"",
+        name: r[5]||"",
+        ocAfterRepair: r[9]||"",
+        comment: r[10]||""
+      }));
+    }
+
+    function parseDatePart(val) {
+      if(!val) return null;
+      const first = val.split(' ')[0].trim();
+      if(/^\d{4}-\d{2}-\d{2}$/.test(first)) return new Date(first);
+      if(/^\d{2}\.\d{2}\.\d{4}$/.test(first)) { const [d,m,y]=first.split('.'); return new Date(`${y}-${m}-${d}`); }
+      const parsed = Date.parse(first);
+      if(!isNaN(parsed)) return new Date(parsed);
+      return null;
+    }
+
+    function getLastDate(data){
+      const dates = data.map(r=>parseDatePart(r.date)).filter(d=>d);
+      return dates.length?new Date(Math.max(...dates.map(d=>d.getTime()))):new Date();
     }
 
     // Модалка
     const modal = document.getElementById('modal');
     const modalBody = document.getElementById('modal-body');
-    document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
-    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
-
-    function openModal(name) {
-      const dateInfoEl = document.getElementById('date-info').textContent;
-      const lastDateStr = dateInfoEl.includes(':') ? dateInfoEl.split(':')[1].trim() : '';
-      const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
-      if (records.length === 0) {
-        modalBody.innerHTML = "<p>Нет данных за текущий день</p>";
-      } else {
-        let html = '<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
-        records.forEach(r => {
-          html += `<tr><td>${(r.serial||'--')}</td><td>${(r.status||'--')}</td><td>${(r.ocAfterRepair||'--')}</td><td>${(r.comment||'--')}</td></tr>`;
-        });
-        html += '</table>';
-        modalBody.innerHTML = html;
-      }
-      modal.classList.add('show');
+    document.getElementById('modal-close').addEventListener('click',()=>modal.classList.remove('show'));
+    modal.addEventListener('click', e=>{if(e.target===modal) modal.classList.remove('show');});
+    function openModal(name){
+      const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
+      const records = combinedDataCache.filter(r=>r.name===name && (r.date||'').split(' ')[0]===lastDateStr);
+      if(!records.length) { modalBody.innerHTML="<p>Нет данных за текущий день</p>"; modal.classList.add('show'); return; }
+      let html='<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
+      records.forEach(r=>{ html+=`<tr><td>${r.serial||'--'}</td><td>${r.status||'--'}</td><td>${r.ocAfterRepair||'--'}</td><td>${r.comment||'--'}</td></tr>`; });
+      html+='</table>'; modalBody.innerHTML=html; modal.classList.add('show');
     }
 
     // Верхняя таблица
-    function displayCombinedStats(filtered) {
-      const stats = {};
-      filtered.forEach(r => {
-        const name = r.name || 'UNKNOWN';
-        if (!stats[name]) stats[name] = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
-        if (r.status === "NDF") stats[name].NDF++;
-        if (r.status === "OK") stats[name].OK++;
-        if (r.status === "WAITING") stats[name].WAITING++;
-        if (r.status === "SCRAP TTL") stats[name]["SCRAP TTL"]++;
-        if (r.status === "SCRAP PNLA") stats[name]["SCRAP PNLA"]++;
-        stats[name].total++;
+    function displayCombinedStats(filtered){
+      const stats={};
+      filtered.forEach(r=>{
+        const n=r.name||'UNKNOWN';
+        if(!stats[n]) stats[n]={NDF:0,OK:0,WAITING:0,'SCRAP TTL':0,'SCRAP PNLA':0,total:0};
+        if(r.status==="NDF") stats[n].NDF++;
+        if(r.status==="OK") stats[n].OK++;
+        if(r.status==="WAITING") stats[n].WAITING++;
+        if(r.status==="SCRAP TTL") stats[n]["SCRAP TTL"]++;
+        if(r.status==="SCRAP PNLA") stats[n]["SCRAP PNLA"]++;
+        stats[n].total++;
       });
 
-      const tbody = document.querySelector('#combined-table tbody');
-      tbody.innerHTML = "";
-      for (let name in stats) {
-        const row = document.createElement('tr');
-        const tdName = document.createElement('td');
-        tdName.textContent = name;
-        tdName.addEventListener('click', () => openModal(name));
+      const tbody=document.querySelector('#combined-table tbody');
+      tbody.innerHTML="";
+      for(let name in stats){
+        const row=document.createElement('tr');
+        const tdName=document.createElement('td');
+        tdName.textContent=name;
+        tdName.addEventListener('click',()=>openModal(name));
         row.appendChild(tdName);
-
-        const keys = ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA"];
-        keys.forEach(k => {
-          const td = document.createElement('td');
-          td.textContent = stats[name][k] || 0;
+        ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA"].forEach(k=>{
+          const td=document.createElement('td');
+          td.textContent=stats[name][k]||0;
           row.appendChild(td);
         });
-
-        const tdTotal = document.createElement('td');
-        tdTotal.textContent = stats[name].total || 0;
-        tdTotal.className = "sum-col";
+        const tdTotal=document.createElement('td');
+        tdTotal.textContent=stats[name].total||0;
+        tdTotal.className="sum-col";
         row.appendChild(tdTotal);
-
         tbody.appendChild(row);
       }
     }
 
     // Нижняя таблица диагоналей
-    function displayDiagonalStats(filtered) {
-      const diagStats = {};
-      filtered.forEach(({name, serial, status}) => {
-        // только OK или NDF по исходному коду
-        if (status !== "OK" && status !== "NDF") return;
-        const diag = extractDiagonal(serial);
-        if (!diag) return;
-        const nm = name || 'UNKNOWN';
-        if (!diagStats[nm]) diagStats[nm] = {};
-        diagStats[nm][diag] = (diagStats[nm][diag] || 0) + 1;
+    function displayDiagonalStats(filtered){
+      const diagStats={};
+      filtered.forEach(({name,serial,status})=>{
+        if(status!=="OK" && status!=="NDF") return;
+        const diag=extractDiagonal(serial);
+        if(!diag) return;
+        const nm=name||'UNKNOWN';
+        if(!diagStats[nm]) diagStats[nm]={};
+        diagStats[nm][diag]=(diagStats[nm][diag]||0)+1;
       });
 
-      const tbody = document.querySelector('#diag-table tbody');
-      const thead = document.querySelector('#diag-table thead');
+      const tbody=document.querySelector('#diag-table tbody');
+      const thead=document.querySelector('#diag-table thead');
 
-      // собрать все диагонали
-      const allDiagonalsSet = new Set();
-      Object.values(diagStats).forEach(obj => {
-        Object.keys(obj).forEach(k => allDiagonalsSet.add(Number(k)));
-      });
-      const allDiagonals = Array.from(allDiagonalsSet).filter(n=>!isNaN(n)).sort((a,b)=>a-b);
+      const allDiagonals=new Set();
+      Object.values(diagStats).forEach(obj=>Object.keys(obj).forEach(k=>allDiagonals.add(Number(k))));
+      const allDiags=Array.from(allDiagonals).filter(n=>!isNaN(n)).sort((a,b)=>a-b);
 
-      // Построить thead
-      const headCells = ['<th>NAME</th>'].concat(allDiagonals.map(d => `<th>${d}</th>`)).concat(['<th class="sum-col">SUMA</th>']);
-      thead.innerHTML = `<tr>${headCells.join('')}</tr>`;
+      const headCells=['<th>NAME</th>'].concat(allDiags.map(d=>`<th>${d}</th>`)).concat(['<th class="sum-col">SUMA</th>']);
+      thead.innerHTML=`<tr>${headCells.join('')}</tr>`;
 
-      // Построить tbody
-      tbody.innerHTML = '';
-      Object.entries(diagStats).forEach(([name, diags]) => {
-        const row = document.createElement('tr');
-        const tdName = document.createElement('td');
-        tdName.textContent = name;
+      tbody.innerHTML='';
+      Object.entries(diagStats).forEach(([name,diags])=>{
+        const row=document.createElement('tr');
+        const tdName=document.createElement('td');
+        tdName.textContent=name;
         row.appendChild(tdName);
-        let sum = 0;
-        allDiagonals.forEach(d => {
-          const val = diags[d] || 0;
-          sum += val;
-          const td = document.createElement('td');
-          td.textContent = val;
+        let sum=0;
+        allDiags.forEach(d=>{
+          const val=diags[d]||0;
+          sum+=val;
+          const td=document.createElement('td');
+          td.textContent=val;
           row.appendChild(td);
         });
-        const tdSum = document.createElement('td');
-        tdSum.textContent = sum;
-        tdSum.className = 'sum-col';
+        const tdSum=document.createElement('td');
+        tdSum.textContent=sum;
+        tdSum.className='sum-col';
         row.appendChild(tdSum);
         tbody.appendChild(row);
       });
 
-      // Если нет данных — очистить таблицу (чтобы не показывать пустой заголовок)
-      if (allDiagonals.length === 0) {
-        thead.innerHTML = '<tr><th>NAME</th><th class="sum-col">SUMA</th></tr>';
-      }
+      if(!allDiags.length) thead.innerHTML='<tr><th>NAME</th><th class="sum-col">SUMA</th></tr>';
     }
 
-    // Обновление данных
-    async function updateStats() {
+    async function updateStats(){
       await fetchAndCacheData();
-      const lastDate = getLastDate(combinedDataCache);
-      const lastDateStr = lastDate.toISOString().split('T')[0];
-      document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
-
-      const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === lastDateStr);
+      const lastDate=getLastDate(combinedDataCache);
+      const lastDateStr=lastDate.toISOString().split('T')[0];
+      document.getElementById('date-info').textContent=`DATE: ${lastDateStr}`;
+      const filtered=combinedDataCache.filter(r=>(r.date||'').split(' ')[0]===lastDateStr);
       displayCombinedStats(filtered);
       displayDiagonalStats(filtered);
     }
 
-    // Поиск
-    async function searchSerial(serial) {
-      const sheet1 = await getData('FI Station KOVALCHYK Y.');
-      const sheet2 = await getData('FI Station 2 ULANOVYCH.R');
-      const combined = [...(sheet1.slice(1) || []), ...(sheet2.slice(1) || [])];
-      const results = combined.filter(r => (r[2] || '') === serial).map(r => ({
-        date: r[0] || "--",
-        status: r[4] || "--",
-        nameF: r[5] || "--",
-        nameG: r[6] || "--",
-        info: r[10] || "--"
+    // Поиск по трём источникам
+    async function searchSerial(serial){
+      const sheet1 = await getData('FI Station KOVALCHYK Y.', sheetId);
+      const sheet2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
+      const sheet3 = await getData('2024', sheetIdArchive);
+      const combined = [...(sheet1.slice(1)||[]), ...(sheet2.slice(1)||[]), ...(sheet3.slice(1)||[])];
+      const results = combined.filter(r=>(r[2]||'')===serial).map(r=>({
+        date:r[0]||"--",
+        status:r[4]||"--",
+        nameF:r[5]||"--",
+        nameG:r[6]||"--",
+        info:r[10]||"--"
       }));
       return results.slice(0,20);
     }
 
-    document.getElementById('search').addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter') {
-        const serial = e.target.value.trim();
-        const output = document.getElementById('search-result');
-        if (!serial) {
-          output.innerHTML = "<p style='color:red'>Podaj SN!</p>";
-          return;
-        }
-        output.innerHTML = "<p style='color:lightblue'>Szukam...</p>";
-        try {
-          const data = await searchSerial(serial);
-          if (data.length > 0) {
-            const rows = data.map(d => `<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('');
-            output.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead><tbody>${rows}</tbody></table>`;
-          } else {
-            output.innerHTML = "<p style='color:yellow'>Brak info!</p>";
-          }
-        } catch (err) {
-          console.error('search error', err);
-          output.innerHTML = "<p style='color:red'>Ошибка поиска</p>";
-        }
+    document.getElementById('search').addEventListener('keypress', async e=>{
+      if(e.key==='Enter'){
+        const serial=e.target.value.trim();
+        const output=document.getElementById('search-result');
+        if(!serial){ output.innerHTML="<p style='color:red'>Podaj SN!</p>"; return; }
+        output.innerHTML="<p style='color:lightblue'>Szukam...</p>";
+        try{
+          const data=await searchSerial(serial);
+          if(data.length){
+            const rows=data.map(d=>`<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('');
+            output.innerHTML=`<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead><tbody>${rows}</tbody></table>`;
+          }else{ output.innerHTML="<p style='color:yellow'>Brak info!</p>"; }
+        }catch(err){ console.error(err); output.innerHTML="<p style='color:red'>Ошибка поиска</p>"; }
       }
     });
 
     // Кнопки скрытия блоков
-    document.getElementById('overview-toggle').addEventListener('click', () => {
-      const block = document.getElementById('overview-block');
-      const btn = document.getElementById('overview-toggle');
-      if (block.style.display === 'none') {
-        block.style.display = 'block';
-        btn.textContent = '👁';
-      } else {
-        block.style.display = 'none';
-        btn.textContent = '🚫';
-      }
+    document.getElementById('overview-toggle').addEventListener('click', ()=>{
+      const block=document.getElementById('overview-block');
+      const btn=document.getElementById('overview-toggle');
+      if(block.style.display==='none'){ block.style.display='block'; btn.textContent='👁'; }
+      else{ block.style.display='none'; btn.textContent='🚫'; }
     });
-    document.getElementById('diag-toggle').addEventListener('click', () => {
-      const block = document.getElementById('diag-block');
-      const btn = document.getElementById('diag-toggle');
-      if (block.style.display === 'none') {
-        block.style.display = 'block';
-        btn.textContent = '👁';
-      } else {
-        block.style.display = 'none';
-        btn.textContent = '🚫';
-      }
+    document.getElementById('diag-toggle').addEventListener('click', ()=>{
+      const block=document.getElementById('diag-block');
+      const btn=document.getElementById('diag-toggle');
+      if(block.style.display==='none'){ block.style.display='block'; btn.textContent='👁'; }
+      else{ block.style.display='none'; btn.textContent='🚫'; }
     });
 
     // Инициализация и автообновление
@@ -439,11 +373,11 @@
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
     ];
-    let bgIndex = 0;
-    function changeBackground() {
-      bgIndex = (bgIndex + 1) % backgrounds.length;
-      document.body.style.background = `url('${backgrounds[bgIndex]}') no-repeat center center fixed`;
-      document.body.style.backgroundSize = "cover";
+    let bgIndex=0;
+    function changeBackground(){
+      bgIndex=(bgIndex+1)%backgrounds.length;
+      document.body.style.background=`url('${backgrounds[bgIndex]}') no-repeat center center fixed`;
+      document.body.style.backgroundSize="cover";
     }
     setInterval(changeBackground, 180000);
   </script>
