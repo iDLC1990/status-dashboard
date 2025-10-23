@@ -111,41 +111,40 @@
 
   <script>
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
-    const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU'; // первая таблица
-    const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8'; // вторая таблица (лист 2024)
+    const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU'; 
+    const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8'; 
 
-    function buildSheetURL(spreadsheetId, sheetName) {
+    function buildSheetURL(spreadsheetId, sheetName){
       return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
     }
 
-    async function getData(sheetName, spreadsheetId = sheetId) {
-      try {
+    async function getData(sheetName, spreadsheetId = sheetId){
+      try{
         const res = await fetch(buildSheetURL(spreadsheetId, sheetName));
-        if (!res.ok) throw new Error(res.statusText);
+        if(!res.ok) throw new Error(res.statusText);
         const data = await res.json();
         return data.values || [];
-      } catch(e) {
+      }catch(e){
         console.error(e);
         return [];
       }
     }
 
     let combinedDataCache = [];
-
     const diagonalMapPrefix = {'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50};
     const diagonalMapSuffix = {'860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24};
 
-    function extractDiagonal(serial) {
+    function extractDiagonal(serial){
       if(!serial) return null;
-      const s = serial.trim();
+      const s=serial.trim();
       if(s.length>=3 && diagonalMapPrefix[s.substr(0,3)]) return diagonalMapPrefix[s.substr(0,3)];
       if(s.length>=6 && diagonalMapSuffix[s.substr(3,3)]) return diagonalMapSuffix[s.substr(3,3)];
-      const last3 = s.slice(-3);
+      const last3=s.slice(-3);
       if(diagonalMapSuffix[last3]) return diagonalMapSuffix[last3];
       return null;
     }
 
-    async function fetchAndCacheData() {
+    async function fetchAndCacheData(){
       const sheet1 = await getData('FI Station KOVALCHYK Y.', sheetId);
       const sheet2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
       const sheet3 = await getData('2024', sheetIdArchive);
@@ -161,19 +160,21 @@
       }));
     }
 
-    function parseDatePart(val) {
+    function parseDatePart(val){
       if(!val) return null;
-      const first = val.split(' ')[0].trim();
+      const first=val.split(' ')[0].trim();
       if(/^\d{4}-\d{2}-\d{2}$/.test(first)) return new Date(first);
-      if(/^\d{2}\.\d{2}\.\d{4}$/.test(first)) { const [d,m,y]=first.split('.'); return new Date(`${y}-${m}-${d}`); }
+      if(/^\d{2}\.\d{2}\.\d{4}$/.test(first)){
+        const [d,m,y]=first.split('.');
+        return new Date(`${y}-${m}-${d}`);
+      }
       const parsed = Date.parse(first);
-      if(!isNaN(parsed)) return new Date(parsed);
-      return null;
+      return isNaN(parsed)?null:new Date(parsed);
     }
 
     function getLastDate(data){
-      const dates = data.map(r=>parseDatePart(r.date)).filter(d=>d);
-      return dates.length?new Date(Math.max(...dates.map(d=>d.getTime()))):new Date();
+      const dates = data.map(r=>parseDatePart(r.date)).filter(d=>d instanceof Date && !isNaN(d));
+      return dates.length? new Date(Math.max(...dates.map(d=>d.getTime()))) : new Date();
     }
 
     // Модалка
@@ -181,16 +182,19 @@
     const modalBody = document.getElementById('modal-body');
     document.getElementById('modal-close').addEventListener('click',()=>modal.classList.remove('show'));
     modal.addEventListener('click', e=>{if(e.target===modal) modal.classList.remove('show');});
+
     function openModal(name){
       const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
       const records = combinedDataCache.filter(r=>r.name===name && (r.date||'').split(' ')[0]===lastDateStr);
-      if(!records.length) { modalBody.innerHTML="<p>Нет данных за текущий день</p>"; modal.classList.add('show'); return; }
-      let html='<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
-      records.forEach(r=>{ html+=`<tr><td>${r.serial||'--'}</td><td>${r.status||'--'}</td><td>${r.ocAfterRepair||'--'}</td><td>${r.comment||'--'}</td></tr>`; });
-      html+='</table>'; modalBody.innerHTML=html; modal.classList.add('show');
+      if(!records.length) modalBody.innerHTML="<p>Нет данных за текущий день</p>";
+      else{
+        let html='<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
+        records.forEach(r=>{html+=`<tr><td>${r.serial||'--'}</td><td>${r.status||'--'}</td><td>${r.ocAfterRepair||'--'}</td><td>${r.comment||'--'}</td></tr>`});
+        html+='</table>'; modalBody.innerHTML=html;
+      }
+      modal.classList.add('show');
     }
 
-    // Верхняя таблица
     function displayCombinedStats(filtered){
       const stats={};
       filtered.forEach(r=>{
@@ -208,24 +212,16 @@
       tbody.innerHTML="";
       for(let name in stats){
         const row=document.createElement('tr');
-        const tdName=document.createElement('td');
-        tdName.textContent=name;
-        tdName.addEventListener('click',()=>openModal(name));
+        const tdName=document.createElement('td'); tdName.textContent=name; tdName.addEventListener('click',()=>openModal(name));
         row.appendChild(tdName);
         ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA"].forEach(k=>{
-          const td=document.createElement('td');
-          td.textContent=stats[name][k]||0;
-          row.appendChild(td);
+          const td=document.createElement('td'); td.textContent=stats[name][k]||0; row.appendChild(td);
         });
-        const tdTotal=document.createElement('td');
-        tdTotal.textContent=stats[name].total||0;
-        tdTotal.className="sum-col";
-        row.appendChild(tdTotal);
+        const tdTotal=document.createElement('td'); tdTotal.textContent=stats[name].total||0; tdTotal.className="sum-col"; row.appendChild(tdTotal);
         tbody.appendChild(row);
       }
     }
 
-    // Нижняя таблица диагоналей
     function displayDiagonalStats(filtered){
       const diagStats={};
       filtered.forEach(({name,serial,status})=>{
@@ -250,21 +246,13 @@
       tbody.innerHTML='';
       Object.entries(diagStats).forEach(([name,diags])=>{
         const row=document.createElement('tr');
-        const tdName=document.createElement('td');
-        tdName.textContent=name;
-        row.appendChild(tdName);
+        const tdName=document.createElement('td'); tdName.textContent=name; row.appendChild(tdName);
         let sum=0;
         allDiags.forEach(d=>{
-          const val=diags[d]||0;
-          sum+=val;
-          const td=document.createElement('td');
-          td.textContent=val;
-          row.appendChild(td);
+          const val=diags[d]||0; sum+=val;
+          const td=document.createElement('td'); td.textContent=val; row.appendChild(td);
         });
-        const tdSum=document.createElement('td');
-        tdSum.textContent=sum;
-        tdSum.className='sum-col';
-        row.appendChild(tdSum);
+        const tdSum=document.createElement('td'); tdSum.textContent=sum; tdSum.className='sum-col'; row.appendChild(tdSum);
         tbody.appendChild(row);
       });
 
@@ -274,27 +262,22 @@
     async function updateStats(){
       await fetchAndCacheData();
       const lastDate=getLastDate(combinedDataCache);
-      const lastDateStr=lastDate.toISOString().split('T')[0];
-      document.getElementById('date-info').textContent=`DATE: ${lastDateStr}`;
+      let lastDateStr="";
+      if(lastDate instanceof Date && !isNaN(lastDate)) lastDateStr=lastDate.toISOString().split('T')[0];
+      document.getElementById('date-info').textContent=`DATE: ${lastDateStr||'--'}`;
       const filtered=combinedDataCache.filter(r=>(r.date||'').split(' ')[0]===lastDateStr);
       displayCombinedStats(filtered);
       displayDiagonalStats(filtered);
     }
 
-    // Поиск по трём источникам
     async function searchSerial(serial){
-      const sheet1 = await getData('FI Station KOVALCHYK Y.', sheetId);
-      const sheet2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
-      const sheet3 = await getData('2024', sheetIdArchive);
-      const combined = [...(sheet1.slice(1)||[]), ...(sheet2.slice(1)||[]), ...(sheet3.slice(1)||[])];
-      const results = combined.filter(r=>(r[2]||'')===serial).map(r=>({
-        date:r[0]||"--",
-        status:r[4]||"--",
-        nameF:r[5]||"--",
-        nameG:r[6]||"--",
-        info:r[10]||"--"
-      }));
-      return results.slice(0,20);
+      const sheet1=await getData('FI Station KOVALCHYK Y.', sheetId);
+      const sheet2=await getData('FI Station 2 ULANOVYCH.R', sheetId);
+      const sheet3=await getData('2024', sheetIdArchive);
+      const combined=[...(sheet1.slice(1)||[]),...(sheet2.slice(1)||[]),...(sheet3.slice(1)||[])];
+      return combined.filter(r=>(r[2]||'')===serial).map(r=>({
+        date:r[0]||"--", status:r[4]||"--", nameF:r[5]||"--", nameG:r[6]||"--", info:r[10]||"--"
+      })).slice(0,20);
     }
 
     document.getElementById('search').addEventListener('keypress', async e=>{
@@ -308,12 +291,11 @@
           if(data.length){
             const rows=data.map(d=>`<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('');
             output.innerHTML=`<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead><tbody>${rows}</tbody></table>`;
-          }else{ output.innerHTML="<p style='color:yellow'>Brak info!</p>"; }
+          }else output.innerHTML="<p style='color:yellow'>Brak info!</p>";
         }catch(err){ console.error(err); output.innerHTML="<p style='color:red'>Ошибка поиска</p>"; }
       }
     });
 
-    // Кнопки скрытия блоков
     document.getElementById('overview-toggle').addEventListener('click', ()=>{
       const block=document.getElementById('overview-block');
       const btn=document.getElementById('overview-toggle');
@@ -327,12 +309,10 @@
       else{ block.style.display='none'; btn.textContent='🚫'; }
     });
 
-    // Инициализация и автообновление
     updateStats();
     setInterval(updateStats, 25000);
 
-    // Смена фона
-    const backgrounds = [
+    const backgrounds=[
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
@@ -379,7 +359,7 @@
       document.body.style.background=`url('${backgrounds[bgIndex]}') no-repeat center center fixed`;
       document.body.style.backgroundSize="cover";
     }
-    setInterval(changeBackground, 180000);
+    setInterval(changeBackground,180000);
   </script>
 </body>
 </html>
