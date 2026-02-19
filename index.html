@@ -391,93 +391,22 @@
     }
 
     function displayCombinedStats(filtered) {
-  const stats = {};
+      const stats = {};
 
-  let totalNDF = 0;
-  let totalOK = 0;
-  let totalWAITING = 0;
-  let totalSCRAP_TTL = 0;
-  let totalSCRAP_PNLA = 0;
-  let grandTotal = 0;
+      filtered.forEach(r => {
+        const n = r.name || 'UNKNOWN';
+        if (!stats[n]) {
+          stats[n] = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
+        }
 
-  filtered.forEach(r => {
-    const n = r.name || 'UNKNOWN';
-    if (!stats[n]) {
-      stats[n] = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
-    }
+        if (r.status === "NDF")        stats[n].NDF++;
+        if (r.status === "OK")         stats[n].OK++;
+        if (r.status === "WAITING")    stats[n].WAITING++;
+        if (r.status === "SCRAP TTL")  stats[n]["SCRAP TTL"]++;
+        if (r.status === "SCRAP PNLA") stats[n]["SCRAP PNLA"]++;
 
-    if (r.status === "NDF") {
-      stats[n].NDF++;
-      totalNDF++;
-    }
-
-    if (r.status === "OK") {
-      stats[n].OK++;
-      totalOK++;
-    }
-
-    if (r.status === "WAITING") {
-      stats[n].WAITING++;
-      totalWAITING++;
-    }
-
-    if (r.status === "SCRAP TTL") {
-      stats[n]["SCRAP TTL"]++;
-      totalSCRAP_TTL++;
-    }
-
-    if (r.status === "SCRAP PNLA") {
-      stats[n]["SCRAP PNLA"]++;
-      totalSCRAP_PNLA++;
-    }
-
-    stats[n].total++;
-    grandTotal++;
-  });
-
-  const tbody = document.querySelector('#combined-table tbody');
-  tbody.innerHTML = "";
-
-  // обычные строки
-  for (let name in stats) {
-    const row = document.createElement('tr');
-
-    const tdName = document.createElement('td');
-    tdName.textContent = name;
-    tdName.addEventListener('click', () => openModal(name));
-    row.appendChild(tdName);
-
-    ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA"].forEach(k => {
-      const td = document.createElement('td');
-      td.textContent = stats[name][k] || 0;
-      row.appendChild(td);
-    });
-
-    const tdTotal = document.createElement('td');
-    tdTotal.textContent = stats[name].total || 0;
-    tdTotal.className = "sum-col";
-    row.appendChild(tdTotal);
-
-    tbody.appendChild(row);
-  }
-
-  // 🔥 TOTAL ROW
-  const totalRow = document.createElement('tr');
-  totalRow.className = "total-row";
-
-  totalRow.innerHTML = `
-    <td>TOTAL</td>
-    <td>${totalNDF}</td>
-    <td>${totalOK}</td>
-    <td>${totalWAITING}</td>
-    <td>${totalSCRAP_TTL}</td>
-    <td>${totalSCRAP_PNLA}</td>
-    <td class="sum-col">${grandTotal}</td>
-  `;
-
-  tbody.appendChild(totalRow);
-}
-
+        stats[n].total++;
+      });
 
       const tbody = document.querySelector('#combined-table tbody');
       tbody.innerHTML = "";
