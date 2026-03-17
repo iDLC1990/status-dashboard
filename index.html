@@ -260,7 +260,6 @@
 
   <div id="modal">
     <div id="modal-content">
-      <button id="modal-close">Закрыть</button>
       <button id="copy-btn">Copy SN</button>
       <div id="modal-body"></div>
     </div>
@@ -474,7 +473,7 @@
       displayDiagonalStats(filtered);
     }
 
-    // ОБНОВЛЕННАЯ ФУНКЦИЯ ПОИСКА: Только за последнюю доступную дату
+    // проба последняя дата
     async function searchSerial(serial) {
       const s1 = await getData('FI Station KOVALCHYK Y.', sheetId);
       const s2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
@@ -482,20 +481,20 @@
       
       const combined = [...s1.slice(1), ...s2.slice(1), ...s3.slice(1)];
       
-      // Находим все вхождения
+     
       const allMatches = combined.filter(r => (r[2] || '').trim() === serial);
       
       if (allMatches.length === 0) return [];
 
-      // Сортируем по дате (колонка r[0]), чтобы найти самую свежую
-      // Используем parseDatePart для корректного сравнения
+    
+      // парс сортир
       allMatches.sort((a, b) => {
         const dateA = parseDatePart(a[0]) || new Date(0);
         const dateB = parseDatePart(b[0]) || new Date(0);
         return dateB - dateA; // От новых к старым
       });
 
-      // Берем только записи, дата которых совпадает с датой самой первой (самой новой) записи
+      // ласт дата
       const latestDateStr = (allMatches[0][0] || "").split(' ')[0];
       
       return allMatches
