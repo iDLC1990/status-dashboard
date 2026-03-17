@@ -163,8 +163,7 @@
       border-radius:10px;
       max-height:80%;
       overflow:auto;
-      width:80%;
-      max-width:900px;
+      width:320px;
     }
 
     #modal-close {
@@ -177,37 +176,38 @@
       margin-bottom:10px;
     }
 
-    #modal table {
-      width:100%;
-      border-collapse:collapse;
-    }
-
-    #modal th, #modal td {
-      border:1px solid #0ff;
-      padding:8px;
-      text-align:center;
-    }
-
-    #modal th {
-      background:#008080;
-      color:#000;
-    }
-
-    /* Секретные кнопки */
-    .secret-btn {
+    #copy-btn {
+      background: #0ff;
+      color: #000;
+      border: none;
+      padding: 5px 10px;
       cursor: pointer;
-      opacity: 0.1; /* Почти невидимая */
+      font-weight: bold;
+      margin-left: 10px;
+      margin-bottom: 10px;
+    }
+
+    /* кнопка Юра */
+    #secret-btn-kovalchyk {
+      cursor: pointer;
+      opacity: 0.1; 
       font-size: 14px;
       transition: opacity 0.3s;
       user-select: none;
       padding: 0 5px;
     }
 
-    .secret-btn:hover {
+    #secret-btn-kovalchyk:hover {
       opacity: 1;
     }
 
-    /* Адаптивность */
+    .sn-list-item {
+      padding: 5px;
+      border-bottom: 1px dashed #444;
+      font-family: monospace;
+      font-size: 16px;
+    }
+
     @media (max-width: 900px) {
       .table-container { width:95%; }
       .header { padding:12px 4%; }
@@ -230,7 +230,7 @@
     <div id="overview-block">
       <div class="table-header">
         <span>FI Station Overview</span>
-        <span class="secret-btn" onclick="showInspectorList('KOVALCHYK Y.')">·</span>
+        <span id="secret-btn-kovalchyk">·</span>
       </div>
       <table id="combined-table">
         <thead>
@@ -252,10 +252,7 @@
   <div class="table-container">
     <button id="diag-toggle" class="toggle-btn">👁</button>
     <div id="diag-block">
-      <div class="table-header">
-        <span>FI Station Diagonals</span>
-        <span class="secret-btn" onclick="showInspectorList('ULANOVYCH.R')">·</span>
-      </div>
+      <div class="table-header">FI Station Diagonals</div>
       <table id="diag-table">
         <thead></thead>
         <tbody></tbody>
@@ -266,6 +263,7 @@
   <div id="modal">
     <div id="modal-content">
       <button id="modal-close">Закрыть</button>
+      <button id="copy-btn">Copy SN</button>
       <div id="modal-body"></div>
     </div>
   </div>
@@ -318,7 +316,6 @@
     }
 
     async function fetchAndCacheData() {
-      // Загружаем листы конкретных инспекторов
       const sheetK = await getData('FI Station KOVALCHYK Y.', sheetId);
       const sheetU = await getData('FI Station 2 ULANOVYCH.R', sheetId);
       const sheetA = await getData('2024', sheetIdArchive);
@@ -335,7 +332,7 @@
         date:  r[0] || "",
         serial: r[2] || "",
         status: r[4] || "",
-        name:  r[5] || "", // Имя того, кого проверяли
+        name:  r[5] || "",
         ocAfterRepair: r[9] || "",
         comment: r[10] || ""
       };
@@ -360,52 +357,56 @@
       return dates.length ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
     }
 
-    // Модалка
     const modal = document.getElementById('modal');
     const modalBody = document.getElementById('modal-body');
+    const copyBtn = document.getElementById('copy-btn');
+
     document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
 
-    // Функция для вывода списка серийников по инспектору
-    function showInspectorList(inspectorName) {
+    // Юра
+    document.getElementById('secret-btn-kovalchyk').addEventListener('click', () => {
       const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
       
-      // Фильтруем кэш: ищем записи, где инспектором был нажатый человек
       const records = combinedDataCache.filter(r => 
-        r.inspector === inspectorName && 
+        r.inspector === 'KOVALCHYK Y.' && 
         (r.date || '').split(' ')[0] === lastDateStr &&
         (r.status === 'OK' || r.status === 'NDF')
       );
 
-      let html = `<h3 style="margin-top:0">Checked by ${inspectorName} (OK/NDF)</h3>`;
+      let html = `<h4 style="margin:0 0 10px 0; color:#008080;">Kovalchyk Y. (SN List)</h4>`;
       if (!records.length) {
-        html += "<p>Brak danych za dziś.</p>";
+        html += "<p>Brak SN za dziś.</p>";
+        copyBtn.style.display = "none";
       } else {
-        html += `<p style="color:#0ff">Total: ${records.length}</p>`;
-        html += '<table><tr><th>#</th><th>Serial</th><th>Status</th><th>Checked Person</th></tr>';
-        records.forEach((r, i) => {
-          html += `<tr>
-            <td>${i + 1}</td>
-            <td>${r.serial || '--'}</td>
-            <td style="color:${r.status === 'OK' ? '#0f0' : '#ff0'}">${r.status}</td>
-            <td>${r.name || '--'}</td>
-          </tr>`;
+        copyBtn.style.display = "inline-block";
+        records.forEach(r => {
+          html += `<div class="sn-list-item">${r.serial || '--'}</div>`;
         });
-        html += '</table>';
       }
       modalBody.innerHTML = html;
       modal.classList.add('show');
-    }
+
+      copyBtn.onclick = () => {
+        const textToCopy = records.map(r => r.serial).join('\n');
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          const old = copyBtn.textContent;
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => copyBtn.textContent = old, 1500);
+        });
+      };
+    });
 
     function openModal(name) {
+      copyBtn.style.display = "none";
       const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
       const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
       if (!records.length) {
-        modalBody.innerHTML = "<p>Нет данных за текущий день</p>";
+        modalBody.innerHTML = "<p>Brak danych.</p>";
       } else {
-        let html = '<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
+        let html = '<table><tr><th>Serial</th><th>Status</th></tr>';
         records.forEach(r => {
-          html += `<tr><td>${r.serial || '--'}</td><td>${r.status || '--'}</td><td>${r.ocAfterRepair || '--'}</td><td>${r.comment || '--'}</td></tr>`;
+          html += `<tr><td>${r.serial || '--'}</td><td>${r.status || '--'}</td></tr>`;
         });
         html += '</table>';
         modalBody.innerHTML = html;
@@ -416,7 +417,6 @@
     function displayCombinedStats(filtered) {
       const stats = {};
       let tNDF=0, tOK=0, tWAIT=0, tTTL=0, tPNLA=0, gTotal=0;
-
       filtered.forEach(r => {
         const n = r.name || 'UNKNOWN';
         if (!stats[n]) stats[n] = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
