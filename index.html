@@ -187,7 +187,7 @@
       margin-bottom: 10px;
     }
 
-    /* Секретная кнопка */
+    /* Юра кнопка */
     #secret-btn-kovalchyk {
       cursor: pointer;
       opacity: 0.1; 
@@ -262,7 +262,6 @@
 
   <div id="modal">
     <div id="modal-content">
-      <button id="modal-close">Закрыть</button>
       <button id="copy-btn">Copy SN</button>
       <div id="modal-body"></div>
     </div>
@@ -361,14 +360,14 @@
     const modalBody = document.getElementById('modal-body');
     const copyBtn = document.getElementById('copy-btn');
 
-    // Безопасное добавление слушателя на закрытие
+
     if(document.getElementById('modal-close')) {
       document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
     }
     
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
 
-    // БЕЗОПАСНАЯ КНОПКА КОВАЛЬЧУКА
+    // кнопка юра
     const kBtn = document.getElementById('secret-btn-kovalchyk');
     if (kBtn) {
       kBtn.addEventListener('click', () => {
