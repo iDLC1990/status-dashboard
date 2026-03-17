@@ -473,7 +473,7 @@
       displayDiagonalStats(filtered);
     }
 
-    // проба последняя дата
+    // обнова поиск
     async function searchSerial(serial) {
       const s1 = await getData('FI Station KOVALCHYK Y.', sheetId);
       const s2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
@@ -486,12 +486,12 @@
       
       if (allMatches.length === 0) return [];
 
-    
+     
       // парс сортир
       allMatches.sort((a, b) => {
         const dateA = parseDatePart(a[0]) || new Date(0);
         const dateB = parseDatePart(b[0]) || new Date(0);
-        return dateB - dateA; // От новых к старым
+        return dateB - dateA; 
       });
 
       // ласт дата
