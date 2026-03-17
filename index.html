@@ -137,6 +137,7 @@
       color:#0ff;
     }
 
+    /* Модалка */
     #modal {
       display:none;
       position:fixed;
@@ -186,6 +187,7 @@
       margin-bottom: 10px;
     }
 
+    /* Секретная кнопка */
     #secret-btn-kovalchyk {
       cursor: pointer;
       opacity: 0.1; 
@@ -260,6 +262,7 @@
 
   <div id="modal">
     <div id="modal-content">
+      <button id="modal-close">Закрыть</button>
       <button id="copy-btn">Copy SN</button>
       <div id="modal-body"></div>
     </div>
@@ -358,36 +361,44 @@
     const modalBody = document.getElementById('modal-body');
     const copyBtn = document.getElementById('copy-btn');
 
-    document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
+    // Безопасное добавление слушателя на закрытие
+    if(document.getElementById('modal-close')) {
+      document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
+    }
+    
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
 
-    document.getElementById('secret-btn-kovalchyk').addEventListener('click', () => {
-      const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
-      const records = combinedDataCache.filter(r => 
-        r.inspector === 'KOVALCHYK Y.' && 
-        (r.date || '').split(' ')[0] === lastDateStr &&
-        (r.status === 'OK' || r.status === 'NDF')
-      );
+    // БЕЗОПАСНАЯ КНОПКА КОВАЛЬЧУКА
+    const kBtn = document.getElementById('secret-btn-kovalchyk');
+    if (kBtn) {
+      kBtn.addEventListener('click', () => {
+        const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
+        const records = combinedDataCache.filter(r => 
+          r.inspector === 'KOVALCHYK Y.' && 
+          (r.date || '').split(' ')[0] === lastDateStr &&
+          (r.status === 'OK' || r.status === 'NDF')
+        );
 
-      let html = `<h4 style="margin:0 0 10px 0; color:#008080;">Kovalchyk Y. (SN List)</h4>`;
-      if (!records.length) {
-        html += "<p>Brak SN za dziś.</p>";
-        copyBtn.style.display = "none";
-      } else {
-        copyBtn.style.display = "inline-block";
-        records.forEach(r => { html += `<div class="sn-list-item">${r.serial || '--'}</div>`; });
-      }
-      modalBody.innerHTML = html;
-      modal.classList.add('show');
-      copyBtn.onclick = () => {
-        const textToCopy = records.map(r => r.serial).join('\n');
-        navigator.clipboard.writeText(textToCopy).then(() => {
-          const old = copyBtn.textContent;
-          copyBtn.textContent = "Copied!";
-          setTimeout(() => copyBtn.textContent = old, 1500);
-        });
-      };
-    });
+        let html = `<h4 style="margin:0 0 10px 0; color:#008080;">Kovalchyk Y. (SN List)</h4>`;
+        if (!records.length) {
+          html += "<p>Brak SN za dziś.</p>";
+          copyBtn.style.display = "none";
+        } else {
+          copyBtn.style.display = "inline-block";
+          records.forEach(r => { html += `<div class="sn-list-item">${r.serial || '--'}</div>`; });
+        }
+        modalBody.innerHTML = html;
+        modal.classList.add('show');
+        copyBtn.onclick = () => {
+          const textToCopy = records.map(r => r.serial).join('\n');
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            const old = copyBtn.textContent;
+            copyBtn.textContent = "Copied!";
+            setTimeout(() => copyBtn.textContent = old, 1500);
+          });
+        };
+      });
+    }
 
     function openModal(name) {
       copyBtn.style.display = "none";
@@ -418,19 +429,21 @@
         stats[n].total++; gTotal++;
       });
       const tbody = document.querySelector('#combined-table tbody');
-      tbody.innerHTML = "";
-      for (let name in stats) {
-        const row = document.createElement('tr');
-        const tdN = document.createElement('td'); tdN.textContent = name; tdN.onclick = () => openModal(name); row.appendChild(tdN);
-        ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA"].forEach(k => {
-          const td = document.createElement('td'); td.textContent = stats[name][k] || 0; row.appendChild(td);
-        });
-        const tdT = document.createElement('td'); tdT.textContent = stats[name].total; tdT.className = "sum-col"; row.appendChild(tdT);
-        tbody.appendChild(row);
+      if(tbody) {
+        tbody.innerHTML = "";
+        for (let name in stats) {
+          const row = document.createElement('tr');
+          const tdN = document.createElement('td'); tdN.textContent = name; tdN.onclick = () => openModal(name); row.appendChild(tdN);
+          ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA"].forEach(k => {
+            const td = document.createElement('td'); td.textContent = stats[name][k] || 0; row.appendChild(td);
+          });
+          const tdT = document.createElement('td'); tdT.textContent = stats[name].total; tdT.className = "sum-col"; row.appendChild(tdT);
+          tbody.appendChild(row);
+        }
+        const tr = document.createElement('tr'); tr.className = "total-row";
+        tr.innerHTML = `<td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td>`;
+        tbody.appendChild(tr);
       }
-      const tr = document.createElement('tr'); tr.className = "total-row";
-      tr.innerHTML = `<td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td>`;
-      tbody.appendChild(tr);
     }
 
     function displayDiagonalStats(filtered) {
@@ -445,99 +458,90 @@
       });
       const tbody = document.querySelector('#diag-table tbody');
       const thead = document.querySelector('#diag-table thead');
-      const allDiagonals = new Set();
-      Object.values(diagStats).forEach(obj => Object.keys(obj).forEach(k => allDiagonals.add(Number(k))));
-      const allDiags = Array.from(allDiagonals).filter(n => !isNaN(n)).sort((a,b) => a - b);
-      thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
-      tbody.innerHTML = '';
-      Object.entries(diagStats).forEach(([name, diags]) => {
-        const row = document.createElement('tr');
-        const tdN = document.createElement('td'); tdN.textContent = name; row.appendChild(tdN);
-        let sum = 0;
-        allDiags.forEach(d => {
-          const val = diags[d] || 0; sum += val;
-          const td = document.createElement('td'); td.textContent = val; row.appendChild(td);
+      if(tbody && thead) {
+        const allDiagonals = new Set();
+        Object.values(diagStats).forEach(obj => Object.keys(obj).forEach(k => allDiagonals.add(Number(k))));
+        const allDiags = Array.from(allDiagonals).filter(n => !isNaN(n)).sort((a,b) => a - b);
+        thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+        tbody.innerHTML = '';
+        Object.entries(diagStats).forEach(([name, diags]) => {
+          const row = document.createElement('tr');
+          const tdN = document.createElement('td'); tdN.textContent = name; row.appendChild(tdN);
+          let sum = 0;
+          allDiags.forEach(d => {
+            const val = diags[d] || 0; sum += val;
+            const td = document.createElement('td'); td.textContent = val; row.appendChild(td);
+          });
+          const tdS = document.createElement('td'); tdS.textContent = sum; tdS.className = 'sum-col'; row.appendChild(tdS);
+          tbody.appendChild(row);
         });
-        const tdS = document.createElement('td'); tdS.textContent = sum; tdS.className = 'sum-col'; row.appendChild(tdS);
-        tbody.appendChild(row);
-      });
+      }
     }
 
     async function updateStats() {
       await fetchAndCacheData();
       const lastDate = getLastDate(combinedDataCache);
       let lastDateStr = lastDate ? lastDate.toISOString().split('T')[0] : "";
-      document.getElementById('date-info').textContent = `DATE: ${lastDateStr || '--'}`;
+      const dInfo = document.getElementById('date-info');
+      if(dInfo) dInfo.textContent = `DATE: ${lastDateStr || '--'}`;
       const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === lastDateStr);
       displayCombinedStats(filtered);
       displayDiagonalStats(filtered);
     }
 
-    // обнова поиск
     async function searchSerial(serial) {
       const s1 = await getData('FI Station KOVALCHYK Y.', sheetId);
       const s2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
       const s3 = await getData('2024', sheetIdArchive);
-      
       const combined = [...s1.slice(1), ...s2.slice(1), ...s3.slice(1)];
-      
-     
       const allMatches = combined.filter(r => (r[2] || '').trim() === serial);
-      
       if (allMatches.length === 0) return [];
-
-     
-      // парс сортир
       allMatches.sort((a, b) => {
         const dateA = parseDatePart(a[0]) || new Date(0);
         const dateB = parseDatePart(b[0]) || new Date(0);
         return dateB - dateA; 
       });
-
-      // ласт дата
       const latestDateStr = (allMatches[0][0] || "").split(' ')[0];
-      
       return allMatches
         .filter(r => (r[0] || "").split(' ')[0] === latestDateStr)
         .map(r => ({
-          date: r[0] || "--", 
-          status: r[4] || "--", 
-          nameF: r[5] || "--", 
-          nameG: r[6] || "--", 
-          info: r[10] || "--"
+          date: r[0] || "--", status: r[4] || "--", nameF: r[5] || "--", nameG: r[6] || "--", info: r[10] || "--"
         }));
     }
 
-    document.getElementById('search').onkeypress = async e => {
-      if (e.key === 'Enter') {
-        const serial = e.target.value.trim();
-        const output = document.getElementById('search-result');
-        if (!serial) return;
-        output.innerHTML = "<p>Szukam...</p>";
-        const data = await searchSerial(serial);
-        if (data.length) {
-          output.innerHTML = `
-            <p style="color:#0f0; font-size:12px;">Показаны данные только за последнюю дату: ${data[0].date.split(' ')[0]}</p>
-            <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
-            <tbody>${data.map(d => `<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('')}</tbody></table>`;
-        } else { output.innerHTML = "<p>Brak info!</p>"; }
-      }
-    };
+    const searchInput = document.getElementById('search');
+    if(searchInput) {
+      searchInput.onkeypress = async e => {
+        if (e.key === 'Enter') {
+          const serial = e.target.value.trim();
+          const output = document.getElementById('search-result');
+          if (!serial || !output) return;
+          output.innerHTML = "<p>Szukam...</p>";
+          const data = await searchSerial(serial);
+          if (data.length) {
+            output.innerHTML = `
+              <p style="color:#0f0; font-size:12px;">Data ostatniej aktywności: ${data[0].date.split(' ')[0]}</p>
+              <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
+              <tbody>${data.map(d => `<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('')}</tbody></table>`;
+          } else { output.innerHTML = "<p>Brak info!</p>"; }
+        }
+      };
+    }
 
     document.getElementById('overview-toggle').onclick = () => {
       const b = document.getElementById('overview-block');
-      b.style.display = (b.style.display === 'none') ? 'block' : 'none';
+      if(b) b.style.display = (b.style.display === 'none') ? 'block' : 'none';
     };
     document.getElementById('diag-toggle').onclick = () => {
       const b = document.getElementById('diag-block');
-      b.style.display = (b.style.display === 'none') ? 'block' : 'none';
+      if(b) b.style.display = (b.style.display === 'none') ? 'block' : 'none';
     };
 
     updateStats();
     setInterval(updateStats, 25000);
 
     const backgrounds = [
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
+     "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-1526713.jpg",
