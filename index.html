@@ -137,7 +137,6 @@
       color:#0ff;
     }
 
-    /* Модалка */
     #modal {
       display:none;
       position:fixed;
@@ -187,7 +186,6 @@
       margin-bottom: 10px;
     }
 
-    /* кнопка Юра */
     #secret-btn-kovalchyk {
       cursor: pointer;
       opacity: 0.1; 
@@ -262,6 +260,7 @@
 
   <div id="modal">
     <div id="modal-content">
+      <button id="modal-close">Закрыть</button>
       <button id="copy-btn">Copy SN</button>
       <div id="modal-body"></div>
     </div>
@@ -363,10 +362,8 @@
     document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
 
-    // Юра
     document.getElementById('secret-btn-kovalchyk').addEventListener('click', () => {
       const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
-      
       const records = combinedDataCache.filter(r => 
         r.inspector === 'KOVALCHYK Y.' && 
         (r.date || '').split(' ')[0] === lastDateStr &&
@@ -379,13 +376,10 @@
         copyBtn.style.display = "none";
       } else {
         copyBtn.style.display = "inline-block";
-        records.forEach(r => {
-          html += `<div class="sn-list-item">${r.serial || '--'}</div>`;
-        });
+        records.forEach(r => { html += `<div class="sn-list-item">${r.serial || '--'}</div>`; });
       }
       modalBody.innerHTML = html;
       modal.classList.add('show');
-
       copyBtn.onclick = () => {
         const textToCopy = records.map(r => r.serial).join('\n');
         navigator.clipboard.writeText(textToCopy).then(() => {
@@ -401,12 +395,10 @@
       const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
       const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
       if (!records.length) {
-        modalBody.innerHTML = "<p>Brak danych.</p>";
+        modalBody.innerHTML = "<p>Brak данных.</p>";
       } else {
         let html = '<table><tr><th>Serial</th><th>Status</th></tr>';
-        records.forEach(r => {
-          html += `<tr><td>${r.serial || '--'}</td><td>${r.status || '--'}</td></tr>`;
-        });
+        records.forEach(r => { html += `<tr><td>${r.serial || '--'}</td><td>${r.status || '--'}</td></tr>`; });
         html += '</table>';
         modalBody.innerHTML = html;
       }
@@ -426,7 +418,6 @@
         if (r.status === "SCRAP PNLA") { stats[n]["SCRAP PNLA"]++; tPNLA++; }
         stats[n].total++; gTotal++;
       });
-
       const tbody = document.querySelector('#combined-table tbody');
       tbody.innerHTML = "";
       for (let name in stats) {
@@ -453,13 +444,11 @@
         if (!diagStats[nm]) diagStats[nm] = {};
         diagStats[nm][diag] = (diagStats[nm][diag] || 0) + 1;
       });
-
       const tbody = document.querySelector('#diag-table tbody');
       const thead = document.querySelector('#diag-table thead');
       const allDiagonals = new Set();
       Object.values(diagStats).forEach(obj => Object.keys(obj).forEach(k => allDiagonals.add(Number(k))));
       const allDiags = Array.from(allDiagonals).filter(n => !isNaN(n)).sort((a,b) => a - b);
-
       thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
       tbody.innerHTML = '';
       Object.entries(diagStats).forEach(([name, diags]) => {
@@ -485,14 +474,39 @@
       displayDiagonalStats(filtered);
     }
 
+    // ОБНОВЛЕННАЯ ФУНКЦИЯ ПОИСКА: Только за последнюю доступную дату
     async function searchSerial(serial) {
       const s1 = await getData('FI Station KOVALCHYK Y.', sheetId);
       const s2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
       const s3 = await getData('2024', sheetIdArchive);
+      
       const combined = [...s1.slice(1), ...s2.slice(1), ...s3.slice(1)];
-      return combined.filter(r => (r[2] || '') === serial).map(r => ({
-        date: r[0] || "--", status: r[4] || "--", nameF: r[5] || "--", nameG: r[6] || "--", info: r[10] || "--"
-      })).slice(0, 20);
+      
+      // Находим все вхождения
+      const allMatches = combined.filter(r => (r[2] || '').trim() === serial);
+      
+      if (allMatches.length === 0) return [];
+
+      // Сортируем по дате (колонка r[0]), чтобы найти самую свежую
+      // Используем parseDatePart для корректного сравнения
+      allMatches.sort((a, b) => {
+        const dateA = parseDatePart(a[0]) || new Date(0);
+        const dateB = parseDatePart(b[0]) || new Date(0);
+        return dateB - dateA; // От новых к старым
+      });
+
+      // Берем только записи, дата которых совпадает с датой самой первой (самой новой) записи
+      const latestDateStr = (allMatches[0][0] || "").split(' ')[0];
+      
+      return allMatches
+        .filter(r => (r[0] || "").split(' ')[0] === latestDateStr)
+        .map(r => ({
+          date: r[0] || "--", 
+          status: r[4] || "--", 
+          nameF: r[5] || "--", 
+          nameG: r[6] || "--", 
+          info: r[10] || "--"
+        }));
     }
 
     document.getElementById('search').onkeypress = async e => {
@@ -503,8 +517,10 @@
         output.innerHTML = "<p>Szukam...</p>";
         const data = await searchSerial(serial);
         if (data.length) {
-          output.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
-          <tbody>${data.map(d => `<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('')}</tbody></table>`;
+          output.innerHTML = `
+            <p style="color:#0f0; font-size:12px;">Показаны данные только за последнюю дату: ${data[0].date.split(' ')[0]}</p>
+            <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
+            <tbody>${data.map(d => `<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('')}</tbody></table>`;
         } else { output.innerHTML = "<p>Brak info!</p>"; }
       }
     };
