@@ -193,16 +193,17 @@
       color:#000;
     }
 
-    /* Секретная кнопка */
-    #secret-list-btn {
+    /* Секретные кнопки */
+    .secret-btn {
       cursor: pointer;
-      opacity: 0.15;
-      font-size: 12px;
+      opacity: 0.1; /* Почти невидимая */
+      font-size: 14px;
       transition: opacity 0.3s;
       user-select: none;
+      padding: 0 5px;
     }
 
-    #secret-list-btn:hover {
+    .secret-btn:hover {
       opacity: 1;
     }
 
@@ -229,7 +230,7 @@
     <div id="overview-block">
       <div class="table-header">
         <span>FI Station Overview</span>
-        <span id="secret-list-btn">·</span>
+        <span class="secret-btn" onclick="showInspectorList('KOVALCHYK Y.')">·</span>
       </div>
       <table id="combined-table">
         <thead>
@@ -251,7 +252,10 @@
   <div class="table-container">
     <button id="diag-toggle" class="toggle-btn">👁</button>
     <div id="diag-block">
-      <div class="table-header">FI Station Diagonals</div>
+      <div class="table-header">
+        <span>FI Station Diagonals</span>
+        <span class="secret-btn" onclick="showInspectorList('ULANOVYCH.R')">·</span>
+      </div>
       <table id="diag-table">
         <thead></thead>
         <tbody></tbody>
@@ -306,55 +310,45 @@
     function extractDiagonal(serial) {
       if (!serial) return null;
       const s = serial.trim();
-
-      if (s.length >= 3 && diagonalMapPrefix[s.substr(0,3)]) {
-        return diagonalMapPrefix[s.substr(0,3)];
-      }
-
-      if (s.length >= 6 && diagonalMapSuffix[s.substr(3,3)]) {
-        return diagonalMapSuffix[s.substr(3,3)];
-      }
-
+      if (s.length >= 3 && diagonalMapPrefix[s.substr(0,3)]) return diagonalMapPrefix[s.substr(0,3)];
+      if (s.length >= 6 && diagonalMapSuffix[s.substr(3,3)]) return diagonalMapSuffix[s.substr(3,3)];
       const last3 = s.slice(-3);
       if (diagonalMapSuffix[last3]) return diagonalMapSuffix[last3];
-
       return null;
     }
 
     async function fetchAndCacheData() {
-      const sheet1 = await getData('FI Station KOVALCHYK Y.', sheetId);
-      const sheet2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
-      const sheet3 = await getData('2024', sheetIdArchive);
+      // Загружаем листы конкретных инспекторов
+      const sheetK = await getData('FI Station KOVALCHYK Y.', sheetId);
+      const sheetU = await getData('FI Station 2 ULANOVYCH.R', sheetId);
+      const sheetA = await getData('2024', sheetIdArchive);
 
-      const rows = [
-        ...(sheet1.slice(1) || []),
-        ...(sheet2.slice(1) || []),
-        ...(sheet3.slice(1) || [])
-      ];
+      const rowsK = (sheetK.slice(1) || []).map(r => ({ ...mapRow(r), inspector: 'KOVALCHYK Y.' }));
+      const rowsU = (sheetU.slice(1) || []).map(r => ({ ...mapRow(r), inspector: 'ULANOVYCH.R' }));
+      const rowsA = (sheetA.slice(1) || []).map(r => ({ ...mapRow(r), inspector: 'ARCHIVE' }));
 
-      combinedDataCache = rows.map(r => ({
+      combinedDataCache = [...rowsK, ...rowsU, ...rowsA];
+    }
+
+    function mapRow(r) {
+      return {
         date:  r[0] || "",
         serial: r[2] || "",
         status: r[4] || "",
-        name:  r[5] || "",
+        name:  r[5] || "", // Имя того, кого проверяли
         ocAfterRepair: r[9] || "",
         comment: r[10] || ""
-      }));
+      };
     }
 
     function parseDatePart(val) {
       if (!val) return null;
       const first = val.split(' ')[0].trim();
-
-      if (/^\d{4}-\d{2}-\d{2}$/.test(first)) {
-        return new Date(first);
-      }
-
+      if (/^\d{4}-\d{2}-\d{2}$/.test(first)) return new Date(first);
       if (/^\d{2}\.\d{2}\.\d{4}$/.test(first)) {
         const [d,m,y] = first.split('.');
         return new Date(`${y}-${m}-${d}`);
       }
-
       const parsed = Date.parse(first);
       return isNaN(parsed) ? null : new Date(parsed);
     }
@@ -369,125 +363,89 @@
     // Модалка
     const modal = document.getElementById('modal');
     const modalBody = document.getElementById('modal-body');
+    document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
 
-    document.getElementById('modal-close')
-      .addEventListener('click', () => modal.classList.remove('show'));
-
-    modal.addEventListener('click', e => {
-      if (e.target === modal) modal.classList.remove('show');
-    });
-
-    function openModal(name) {
-      const lastDateStr = document
-        .getElementById('date-info')
-        .textContent.split(':')[1]
-        .trim();
-
-      const records = combinedDataCache.filter(
-        r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr
+    // Функция для вывода списка серийников по инспектору
+    function showInspectorList(inspectorName) {
+      const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
+      
+      // Фильтруем кэш: ищем записи, где инспектором был нажатый человек
+      const records = combinedDataCache.filter(r => 
+        r.inspector === inspectorName && 
+        (r.date || '').split(' ')[0] === lastDateStr &&
+        (r.status === 'OK' || r.status === 'NDF')
       );
 
+      let html = `<h3 style="margin-top:0">Checked by ${inspectorName} (OK/NDF)</h3>`;
+      if (!records.length) {
+        html += "<p>Brak danych za dziś.</p>";
+      } else {
+        html += `<p style="color:#0ff">Total: ${records.length}</p>`;
+        html += '<table><tr><th>#</th><th>Serial</th><th>Status</th><th>Checked Person</th></tr>';
+        records.forEach((r, i) => {
+          html += `<tr>
+            <td>${i + 1}</td>
+            <td>${r.serial || '--'}</td>
+            <td style="color:${r.status === 'OK' ? '#0f0' : '#ff0'}">${r.status}</td>
+            <td>${r.name || '--'}</td>
+          </tr>`;
+        });
+        html += '</table>';
+      }
+      modalBody.innerHTML = html;
+      modal.classList.add('show');
+    }
+
+    function openModal(name) {
+      const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
+      const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
       if (!records.length) {
         modalBody.innerHTML = "<p>Нет данных за текущий день</p>";
       } else {
         let html = '<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
         records.forEach(r => {
-          html += `<tr>
-            <td>${r.serial || '--'}</td>
-            <td>${r.status || '--'}</td>
-            <td>${r.ocAfterRepair || '--'}</td>
-            <td>${r.comment || '--'}</td>
-          </tr>`;
+          html += `<tr><td>${r.serial || '--'}</td><td>${r.status || '--'}</td><td>${r.ocAfterRepair || '--'}</td><td>${r.comment || '--'}</td></tr>`;
         });
         html += '</table>';
         modalBody.innerHTML = html;
       }
-
       modal.classList.add('show');
     }
 
     function displayCombinedStats(filtered) {
       const stats = {};
-
-      let totalNDF = 0;
-      let totalOK = 0;
-      let totalWAITING = 0;
-      let totalSCRAP_TTL = 0;
-      let totalSCRAP_PNLA = 0;
-      let grandTotal = 0;
+      let tNDF=0, tOK=0, tWAIT=0, tTTL=0, tPNLA=0, gTotal=0;
 
       filtered.forEach(r => {
         const n = r.name || 'UNKNOWN';
-        if (!stats[n]) {
-          stats[n] = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
-        }
-
-        if (r.status === "NDF") {
-          stats[n].NDF++;
-          totalNDF++;
-        }
-        if (r.status === "OK") {
-          stats[n].OK++;
-          totalOK++;
-        }
-        if (r.status === "WAITING") {
-          stats[n].WAITING++;
-          totalWAITING++;
-        }
-        if (r.status === "SCRAP TTL") {
-          stats[n]["SCRAP TTL"]++;
-          totalSCRAP_TTL++;
-        }
-        if (r.status === "SCRAP PNLA") {
-          stats[n]["SCRAP PNLA"]++;
-          totalSCRAP_PNLA++;
-        }
-
-        stats[n].total++;
-        grandTotal++;
+        if (!stats[n]) stats[n] = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
+        if (r.status === "NDF") { stats[n].NDF++; tNDF++; }
+        if (r.status === "OK") { stats[n].OK++; tOK++; }
+        if (r.status === "WAITING") { stats[n].WAITING++; tWAIT++; }
+        if (r.status === "SCRAP TTL") { stats[n]["SCRAP TTL"]++; tTTL++; }
+        if (r.status === "SCRAP PNLA") { stats[n]["SCRAP PNLA"]++; tPNLA++; }
+        stats[n].total++; gTotal++;
       });
 
       const tbody = document.querySelector('#combined-table tbody');
       tbody.innerHTML = "";
-
       for (let name in stats) {
         const row = document.createElement('tr');
-        const tdName = document.createElement('td');
-        tdName.textContent = name;
-        tdName.addEventListener('click', () => openModal(name));
-        row.appendChild(tdName);
-
+        const tdN = document.createElement('td'); tdN.textContent = name; tdN.onclick = () => openModal(name); row.appendChild(tdN);
         ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA"].forEach(k => {
-          const td = document.createElement('td');
-          td.textContent = stats[name][k] || 0;
-          row.appendChild(td);
+          const td = document.createElement('td'); td.textContent = stats[name][k] || 0; row.appendChild(td);
         });
-
-        const tdTotal = document.createElement('td');
-        tdTotal.textContent = stats[name].total || 0;
-        tdTotal.className = "sum-col";
-        row.appendChild(tdTotal);
-
+        const tdT = document.createElement('td'); tdT.textContent = stats[name].total; tdT.className = "sum-col"; row.appendChild(tdT);
         tbody.appendChild(row);
       }
-
-      const totalRow = document.createElement('tr');
-      totalRow.className = "total-row";
-      totalRow.innerHTML = `
-        <td>TOTAL</td>
-        <td>${totalNDF}</td>
-        <td>${totalOK}</td>
-        <td>${totalWAITING}</td>
-        <td>${totalSCRAP_TTL}</td>
-        <td>${totalSCRAP_PNLA}</td>
-        <td class="sum-col">${grandTotal}</td>
-      `;
-      tbody.appendChild(totalRow);
+      const tr = document.createElement('tr'); tr.className = "total-row";
+      tr.innerHTML = `<td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td>`;
+      tbody.appendChild(tr);
     }
 
     function displayDiagonalStats(filtered) {
       const diagStats = {};
-
       filtered.forEach(({name, serial, status}) => {
         if (status !== "OK" && status !== "NDF") return;
         const diag = extractDiagonal(serial);
@@ -499,183 +457,67 @@
 
       const tbody = document.querySelector('#diag-table tbody');
       const thead = document.querySelector('#diag-table thead');
-
       const allDiagonals = new Set();
-      Object.values(diagStats).forEach(obj =>
-        Object.keys(obj).forEach(k => allDiagonals.add(Number(k)))
-      );
+      Object.values(diagStats).forEach(obj => Object.keys(obj).forEach(k => allDiagonals.add(Number(k))));
+      const allDiags = Array.from(allDiagonals).filter(n => !isNaN(n)).sort((a,b) => a - b);
 
-      const allDiags = Array.from(allDiagonals)
-        .filter(n => !isNaN(n))
-        .sort((a,b) => a - b);
-
-      const headCells = ['<th>NAME</th>']
-        .concat(allDiags.map(d => `<th>${d}</th>`))
-        .concat(['<th class="sum-col">SUMA</th>']);
-
-      thead.innerHTML = `<tr>${headCells.join('')}</tr>`;
+      thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
       tbody.innerHTML = '';
-
       Object.entries(diagStats).forEach(([name, diags]) => {
         const row = document.createElement('tr');
-        const tdName = document.createElement('td');
-        tdName.textContent = name;
-        row.appendChild(tdName);
-
+        const tdN = document.createElement('td'); tdN.textContent = name; row.appendChild(tdN);
         let sum = 0;
         allDiags.forEach(d => {
-          const val = diags[d] || 0;
-          sum += val;
-          const td = document.createElement('td');
-          td.textContent = val;
-          row.appendChild(td);
+          const val = diags[d] || 0; sum += val;
+          const td = document.createElement('td'); td.textContent = val; row.appendChild(td);
         });
-
-        const tdSum = document.createElement('td');
-        tdSum.textContent = sum;
-        tdSum.className = 'sum-col';
-        row.appendChild(tdSum);
+        const tdS = document.createElement('td'); tdS.textContent = sum; tdS.className = 'sum-col'; row.appendChild(tdS);
         tbody.appendChild(row);
       });
-
-      if (!allDiags.length) {
-        thead.innerHTML = '<tr><th>NAME</th><th class="sum-col">SUMA</th></tr>';
-      }
     }
 
     async function updateStats() {
       await fetchAndCacheData();
       const lastDate = getLastDate(combinedDataCache);
-      let lastDateStr = "";
-      if (lastDate instanceof Date && !isNaN(lastDate)) {
-        lastDateStr = lastDate.toISOString().split('T')[0];
-      }
+      let lastDateStr = lastDate ? lastDate.toISOString().split('T')[0] : "";
       document.getElementById('date-info').textContent = `DATE: ${lastDateStr || '--'}`;
-
-      const filtered = combinedDataCache.filter(
-        r => (r.date || '').split(' ')[0] === lastDateStr
-      );
+      const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === lastDateStr);
       displayCombinedStats(filtered);
       displayDiagonalStats(filtered);
     }
 
     async function searchSerial(serial) {
-      const sheet1 = await getData('FI Station KOVALCHYK Y.', sheetId);
-      const sheet2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
-      const sheet3 = await getData('2024', sheetIdArchive);
-      const combined = [
-        ...(sheet1.slice(1) || []),
-        ...(sheet2.slice(1) || []),
-        ...(sheet3.slice(1) || [])
-      ];
-      return combined
-        .filter(r => (r[2] || '') === serial)
-        .map(r => ({
-          date:  r[0] || "--",
-          status:r[4] || "--",
-          nameF:r[5] || "--",
-          nameG:r[6] || "--",
-          info: r[10] || "--"
-        }))
-        .slice(0, 20);
+      const s1 = await getData('FI Station KOVALCHYK Y.', sheetId);
+      const s2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
+      const s3 = await getData('2024', sheetIdArchive);
+      const combined = [...s1.slice(1), ...s2.slice(1), ...s3.slice(1)];
+      return combined.filter(r => (r[2] || '') === serial).map(r => ({
+        date: r[0] || "--", status: r[4] || "--", nameF: r[5] || "--", nameG: r[6] || "--", info: r[10] || "--"
+      })).slice(0, 20);
     }
 
-    document.getElementById('search').addEventListener('keypress', async e => {
+    document.getElementById('search').onkeypress = async e => {
       if (e.key === 'Enter') {
         const serial = e.target.value.trim();
         const output = document.getElementById('search-result');
-        if (!serial) {
-          output.innerHTML = "<p style='color:red'>Podaj SN!</p>";
-          return;
-        }
-        output.innerHTML = "<p style='color:lightblue'>Szukam...</p>";
-        try {
-          const data = await searchSerial(serial);
-          if (data.length) {
-            const rows = data.map(d => `
-              <tr>
-                <td>${d.date}</td>
-                <td>${d.status}</td>
-                <td>${d.nameF}</td>
-                <td>${d.nameG}</td>
-                <td>${d.info}</td>
-              </tr>
-            `).join('');
-            output.innerHTML = `
-              <table>
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Status</th>
-                    <th>NAPRAWIACZ</th>
-                    <th>FINALNA</th>
-                    <th>INFO</th>
-                  </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-              </table>
-            `;
-          } else {
-            output.innerHTML = "<p style='color:yellow'>Brak info!</p>";
-          }
-        } catch (err) {
-          output.innerHTML = "<p style='color:red'>Ошибка поиска</p>";
-        }
+        if (!serial) return;
+        output.innerHTML = "<p>Szukam...</p>";
+        const data = await searchSerial(serial);
+        if (data.length) {
+          output.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
+          <tbody>${data.map(d => `<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('')}</tbody></table>`;
+        } else { output.innerHTML = "<p>Brak info!</p>"; }
       }
-    });
+    };
 
-    // Логика секретной кнопки для KOVALCHYK Y.
-    document.getElementById('secret-list-btn').addEventListener('click', () => {
-      const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
-      const records = combinedDataCache.filter(r => 
-        r.name === 'KOVALCHYK Y.' && 
-        (r.date || '').split(' ')[0] === lastDateStr &&
-        (r.status === 'OK' || r.status === 'NDF')
-      );
-
-      let html = '<h3 style="margin-top:0">List OK/NDF: KOVALCHYK Y.</h3>';
-      if (!records.length) {
-        html += "<p>Brak danych za dziś.</p>";
-      } else {
-        html += `<p style="font-size:14px; color:#0ff">Total: ${records.length}</p>`;
-        html += '<table><tr><th>#</th><th>Serial</th><th>Status</th><th>Comment</th></tr>';
-        records.forEach((r, i) => {
-          html += `<tr>
-            <td>${i + 1}</td>
-            <td>${r.serial || '--'}</td>
-            <td style="color:${r.status === 'OK' ? '#0f0' : '#ff0'}">${r.status}</td>
-            <td>${r.comment || '--'}</td>
-          </tr>`;
-        });
-        html += '</table>';
-      }
-      modalBody.innerHTML = html;
-      modal.classList.add('show');
-    });
-
-    document.getElementById('overview-toggle').addEventListener('click', () => {
-      const block = document.getElementById('overview-block');
-      const btn = document.getElementById('overview-toggle');
-      if (block.style.display === 'none') {
-        block.style.display = 'block';
-        btn.textContent = '👁';
-      } else {
-        block.style.display = 'none';
-        btn.textContent = '🚫';
-      }
-    });
-
-    document.getElementById('diag-toggle').addEventListener('click', () => {
-      const block = document.getElementById('diag-block');
-      const btn = document.getElementById('diag-toggle');
-      if (block.style.display === 'none') {
-        block.style.display = 'block';
-        btn.textContent = '👁';
-      } else {
-        block.style.display = 'none';
-        btn.textContent = '🚫';
-      }
-    });
+    document.getElementById('overview-toggle').onclick = () => {
+      const b = document.getElementById('overview-block');
+      b.style.display = (b.style.display === 'none') ? 'block' : 'none';
+    };
+    document.getElementById('diag-toggle').onclick = () => {
+      const b = document.getElementById('diag-block');
+      b.style.display = (b.style.display === 'none') ? 'block' : 'none';
+    };
 
     updateStats();
     setInterval(updateStats, 25000);
@@ -683,50 +525,14 @@
     const backgrounds = [
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-1526713.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-gochrisgoxyz-1643409.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-iriser-1366957.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joshkjack-135018.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-326055.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rickyrecap-2627063.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rpnickson-2478248.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sanaan-3075993.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-simon73-1183099.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pengwhan-1767434.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harry-shum-17627821-15984177.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-am83-12709111.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-njeromin-12766489.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-533923.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-robshumski-1903702.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-elti-meshau-107925-333850.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harun-tan-2311991-3980364.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joyston-judah-331625-933054.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-464336.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-35857.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jahoo-388415.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-therato-1933320.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2166711.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thanhhoa-tran-640546-1462892.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jplenio-3131634.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2563129.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-david-bartus-43782-2379653.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-dreamypixel-547114.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sebastiaan9977-1097456.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-souvenirpixels-1519088.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
+      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-iriser-1366957.jpg"
     ];
-
     let bgIndex = 0;
-    function changeBackground() {
+    setInterval(() => {
       bgIndex = (bgIndex + 1) % backgrounds.length;
       document.body.style.background = `url('${backgrounds[bgIndex]}') no-repeat center center fixed`;
       document.body.style.backgroundSize = "cover";
-    }
-    setInterval(changeBackground, 180000);
+    }, 180000);
   </script>
 </body>
 </html>
