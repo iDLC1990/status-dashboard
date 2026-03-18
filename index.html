@@ -129,7 +129,6 @@ border:2px solid #0ff;
 background-color:#333;
 }
 
-/* Анимация мигания для последней записи в поиске */
 @keyframes blink-active {
   0% { background-color: rgba(0, 128, 128, 0.3); }
   50% { background-color: rgba(0, 255, 255, 0.6); }
@@ -142,7 +141,6 @@ background-color:#333;
   font-weight: bold;
 }
 
-/* Модалка */
 #modal {
 display:none;
 position:fixed;
@@ -196,7 +194,6 @@ border-radius: 4px;
 margin-left: 10px;
 }
 
-/* Секретная кнопка Юры */
 #secret-btn-kovalchyk {
 cursor: pointer;
 opacity: 0.1;
@@ -283,6 +280,8 @@ const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
 const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
 const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8';
 
+let combinedDataCache = []; // Основной буфер
+
 function buildSheetURL(spreadsheetId, sheetName) {
 return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
 }
@@ -294,12 +293,10 @@ if (!res.ok) throw new Error(res.statusText);
 const data = await res.json();
 return data.values || [];
 } catch (e) {
-console.error(e);
-return [];
+console.error(`Error fetching ${sheetName}:`, e);
+return null; // Возвращаем null при ошибке для обработки в Promise.all
 }
 }
-
-let combinedDataCache = [];
 
 const diagonalMapPrefix = {'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50};
 const diagonalMapSuffix = {'860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24};
@@ -313,22 +310,42 @@ const last3 = s.slice(-3);
 return diagonalMapSuffix[last3] || null;
 }
 
+// РЕАЛИЗАЦИЯ ДВОЙНОЙ БУФЕРИЗАЦИИ
 async function fetchAndCacheData() {
-const s1 = await getData('FI Station KOVALCHYK Y.', sheetId);
-const s2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
-const s3 = await getData('2024', sheetIdArchive);
+    try {
+        // Загружаем данные параллельно (быстрее)
+        const [s1, s2, s3] = await Promise.all([
+            getData('FI Station KOVALCHYK Y.', sheetId),
+            getData('FI Station 2 ULANOVYCH.R', sheetId),
+            getData('2024', sheetIdArchive)
+        ]);
 
-const mapR = (r, insp) => ({
-date: r[0] || "", serial: r[2] || "", status: r[4] || "",
-name: r[5] || "", nameG: r[6] || "", ocAfterRepair: r[9] || "", 
-comment: r[10] || "", inspector: insp
-});
+        // Если критические данные не загрузились, не обновляем кеш
+        if (!s1 && !s2) return false;
 
-combinedDataCache = [
-...(s1.slice(1) || []).map(r => mapR(r, 'KOVALCHYK Y.')),
-...(s2.slice(1) || []).map(r => mapR(r, 'ULANOVYCH.R')),
-...(s3.slice(1) || []).map(r => mapR(r, 'ARCHIVE'))
-];
+        const mapR = (r, insp) => ({
+            date: r[0] || "", serial: r[2] || "", status: r[4] || "",
+            name: r[5] || "", nameG: r[6] || "", ocAfterRepair: r[9] || "", 
+            comment: r[10] || "", inspector: insp
+        });
+
+        // Создаем временный массив (Теневой буфер)
+        const shadowBuffer = [
+            ...(s1 ? s1.slice(1) : []).map(r => mapR(r, 'KOVALCHYK Y.')),
+            ...(s2 ? s2.slice(1) : []).map(r => mapR(r, 'ULANOVYCH.R')),
+            ...(s3 ? s3.slice(1) : []).map(r => mapR(r, 'ARCHIVE'))
+        ];
+
+        // Только если получили данные, обновляем основной кеш
+        if (shadowBuffer.length > 0) {
+            combinedDataCache = shadowBuffer;
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.error("Buffer update failed:", e);
+        return false;
+    }
 }
 
 function parseDatePart(val) {
@@ -356,13 +373,13 @@ const modalClose = document.getElementById('modal-close');
 if(modalClose) modalClose.onclick = () => modal.classList.remove('show');
 if(modal) modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
 
-// Секретная кнопка Юры
 const secretBtn = document.getElementById('secret-btn-kovalchyk');
 if(secretBtn) {
     secretBtn.onclick = () => {
         if(!copyBtn || !modalBody || !modal) return;
         copyBtn.style.display = "inline-block";
-        const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
+        const dInfoText = document.getElementById('date-info').textContent;
+        const lastDateStr = dInfoText.includes(':') ? dInfoText.split(':')[1].trim() : "";
         const records = combinedDataCache.filter(r => 
             r.inspector === 'KOVALCHYK Y.' && 
             (r.date || '').split(' ')[0] === lastDateStr &&
@@ -371,7 +388,7 @@ if(secretBtn) {
 
         let html = `<h4 style="margin:0 0 10px 0; color:#008080;">Kovalchyk Y. (Daily SN List)</h4>`;
         if (!records.length) {
-            html += "<p>Brak данных за сегодня.</p>";
+            html += "<p>Brak danych za сегодня.</p>";
             copyBtn.style.display = "none";
         } else {
             records.forEach(r => { html += `<div class="sn-list-item">${r.serial || '--'}</div>`; });
@@ -393,11 +410,12 @@ if(secretBtn) {
 function openModal(name) {
     if(!copyBtn || !modalBody || !modal) return;
     copyBtn.style.display = "none";
-    const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
+    const dInfoText = document.getElementById('date-info').textContent;
+    const lastDateStr = dInfoText.includes(':') ? dInfoText.split(':')[1].trim() : "";
     const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
 
     if (!records.length) {
-        modalBody.innerHTML = "<p>Brak данных за сегодня.</p>";
+        modalBody.innerHTML = "<p>Brak danych za сегодня.</p>";
     } else {
         let html = '<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
         records.forEach(r => {
@@ -470,7 +488,6 @@ function displayDiagonalStats(filtered) {
     });
 }
 
-// Поиск с миганием самой свежей записи
 const searchInput = document.getElementById('search');
 if(searchInput) {
     searchInput.addEventListener('keypress', async e => {
@@ -478,36 +495,45 @@ if(searchInput) {
             const serial = e.target.value.trim();
             const output = document.getElementById('search-result');
             if (!serial || !output) return;
-            output.innerHTML = "<p style='color:lightblue'>Szukam...</p>";
-            try {
-                const matches = combinedDataCache.filter(r => (r.serial || '').trim() === serial);
-                if (matches.length) {
-                    matches.sort((a, b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
-                    let rowsHtml = matches.map((d, idx) => {
-                        const isLatest = idx === 0 ? 'class="latest-record"' : '';
-                        return `<tr ${isLatest}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`;
-                    }).join('');
-                    output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;">Znaleziono: ${matches.length}</div>
-                    <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
-                    <tbody>${rowsHtml}</tbody></table>`;
-                } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
-            } catch (err) { output.innerHTML = "<p style='color:red'>Błąd поиска!</p>"; }
+            output.innerHTML = "<p style='color:lightblue'>Szukam в буфере...</p>";
+            
+            const matches = combinedDataCache.filter(r => (r.serial || '').trim() === serial);
+            if (matches.length) {
+                matches.sort((a, b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
+                let rowsHtml = matches.map((d, idx) => {
+                    const isLatest = idx === 0 ? 'class="latest-record"' : '';
+                    return `<tr ${isLatest}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`;
+                }).join('');
+                output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;">Znaleziono: ${matches.length}</div>
+                <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
+                <tbody>${rowsHtml}</tbody></table>`;
+            } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
         }
     });
 }
 
+// ОСНОВНОЙ ЦИКЛ ОБНОВЛЕНИЯ (БЕЗОПАСНЫЙ)
 async function updateStats() {
-    await fetchAndCacheData();
+    // 1. Пытаемся обновить буфер в фоне
+    const success = await fetchAndCacheData();
+    
+    // 2. Если данных в буфере всё ещё нет (даже старых), ничего не рисуем
+    if (combinedDataCache.length === 0) return;
+
+    // 3. Вычисляем дату и фильтруем (используем кеш, который точно не пустой)
     const lastDate = getLastDate(combinedDataCache);
     let lastDateStr = lastDate ? lastDate.toISOString().split('T')[0] : "";
+    
     const dInfo = document.getElementById('date-info');
     if(dInfo) dInfo.textContent = `DATE: ${lastDateStr || '--'}`;
+    
     const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === lastDateStr);
+    
+    // 4. Отрисовка (происходит мгновенно, так как данные уже в памяти)
     displayCombinedStats(filtered);
     displayDiagonalStats(filtered);
 }
 
-// Безопасное назначение кнопок
 const ovBtn = document.getElementById('overview-toggle');
 const ovBlock = document.getElementById('overview-block');
 if(ovBtn && ovBlock) {
@@ -521,9 +547,10 @@ if(diBtn && diBlock) {
 }
 
 updateStats();
-setInterval(updateStats, 60000);
+setInterval(updateStats, 60000); // Обновление раз в минуту
 
-const backgrounds = ["https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
+const backgrounds = [
+"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-1526713.jpg",
@@ -535,7 +562,6 @@ const backgrounds = ["https://raw.githubusercontent.com/iDLC1990/status-dashboar
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rpnickson-2478248.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sanaan-3075993.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-simon73-1183099.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pengwhan-1767434.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harry-shum-17627821-15984177.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-am83-12709111.jpg",
@@ -546,7 +572,6 @@ const backgrounds = ["https://raw.githubusercontent.com/iDLC1990/status-dashboar
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harun-tan-2311991-3980364.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joyston-judah-331625-933054.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-464336.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-326055.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-35857.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jahoo-388415.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-therato-1933320.jpg",
@@ -560,8 +585,7 @@ const backgrounds = ["https://raw.githubusercontent.com/iDLC1990/status-dashboar
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-souvenirpixels-1519088.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
+"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg"
 ];
 let bgIndex = 0;
 setInterval(() => {
