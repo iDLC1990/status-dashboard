@@ -129,7 +129,7 @@ border:2px solid #0ff;
 background-color:#333;
 }
 
-/* Анимация мигания для последней записи в поиске */
+/* Мигалка */
 @keyframes blink-active {
   0% { background-color: rgba(0, 128, 128, 0.3); }
   50% { background-color: rgba(0, 255, 255, 0.6); }
@@ -283,7 +283,7 @@ const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
 const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
 const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8';
 
-let combinedDataCache = []; // Основной буфер данных
+let combinedDataCache = []; // 
 
 function buildSheetURL(spreadsheetId, sheetName) {
 return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
@@ -297,7 +297,7 @@ const data = await res.json();
 return data.values || [];
 } catch (e) {
 console.error(`Fetch error ${sheetName}:`, e);
-return null; // Возвращаем null для корректной работы Promise.all
+return null; 
 }
 }
 
@@ -313,7 +313,7 @@ const last3 = s.slice(-3);
 return diagonalMapSuffix[last3] || null;
 }
 
-// ФУНКЦИЯ ЗАГРУЗКИ С ДВОЙНОЙ БУФЕРИЗАЦИЕЙ
+// ДВОЙНОЙ БУФЕР
 async function fetchAndCacheData() {
     try {
         const [s1, s2, s3] = await Promise.all([
@@ -322,13 +322,13 @@ async function fetchAndCacheData() {
             getData('2024', sheetIdArchive)
         ]);
 
-        // Если основные листы не загрузились, прерываемся и сохраняем старый кеш
+       
         if (!s1 && !s2) return false;
 
         const mapR = (r, insp) => ({
             date: r[0] || "", 
             serial: r[2] || "", 
-            type: (r[3] || "").trim().toUpperCase(), // СТОЛБЕЦ D (MNT)
+            type: (r[3] || "").trim().toUpperCase(), 
             status: r[4] || "",
             name: r[5] || "", 
             nameG: r[6] || "", 
@@ -337,7 +337,7 @@ async function fetchAndCacheData() {
             inspector: insp
         });
 
-        // Формируем временный теневой буфер
+        
         const shadowBuffer = [
             ...(s1 ? s1.slice(1) : []).map(r => mapR(r, 'KOVALCHYK Y.')),
             ...(s2 ? s2.slice(1) : []).map(r => mapR(r, 'ULANOVYCH.R')),
@@ -345,7 +345,7 @@ async function fetchAndCacheData() {
         ];
 
         if (shadowBuffer.length > 0) {
-            combinedDataCache = shadowBuffer; // Обновляем основной кеш только здесь
+            combinedDataCache = shadowBuffer; 
             return true;
         }
         return false;
@@ -380,7 +380,7 @@ const modalClose = document.getElementById('modal-close');
 if(modalClose) modalClose.onclick = () => modal.classList.remove('show');
 if(modal) modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
 
-// Секретная кнопка Юры с фильтром по столбцу D (MNT)
+// фильтр мониторов из списка
 const secretBtn = document.getElementById('secret-btn-kovalchyk');
 if(secretBtn) {
     secretBtn.onclick = () => {
@@ -389,11 +389,11 @@ if(secretBtn) {
         const dInfoText = document.getElementById('date-info').textContent;
         const lastDateStr = dInfoText.includes(':') ? dInfoText.split(':')[1].trim() : "";
         
-        // Фильтруем: только Юра, только сегодня, статус OK/NDF и НЕ МОНИТОР
+        // ок ндф скрап
         const records = combinedDataCache.filter(r => 
             r.inspector === 'KOVALCHYK Y.' && 
             (r.date || '').split(' ')[0] === lastDateStr &&
-            (r.status === 'OK' || r.status === 'NDF') &&
+            (r.status === 'OK' || r.status === 'NDF'|| r.status === 'SCRAP TTL') &&
             r.type !== 'MNT'
         );
 
@@ -525,11 +525,9 @@ if(searchInput) {
 }
 
 async function updateStats() {
-    // Ждем загрузку в буфер
+    
     const success = await fetchAndCacheData();
     
-    // Если загрузка провалилась и буфер пуст (первый запуск), ничего не делаем.
-    // Если буфер уже был наполнен ранее, используем старые данные (таблицы не исчезнут).
     if (combinedDataCache.length === 0) return;
 
     const lastDate = getLastDate(combinedDataCache);
