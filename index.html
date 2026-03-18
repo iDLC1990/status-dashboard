@@ -371,7 +371,7 @@
         const records = combinedDataCache.filter(r => 
           r.inspector === 'KOVALCHYK Y.' && 
           (r.date || '').split(' ')[0] === lastDateStr &&
-          (r.status === 'OK' || r.status === 'NDF')
+          (r.status === 'OK' || r.status === 'NDF'|| r.status === 'SCRAP TTL')
         );
 
         let html = `<h4 style="margin:0 0 10px 0; color:#008080;">Kovalchyk Y. (SN List)</h4>`;
