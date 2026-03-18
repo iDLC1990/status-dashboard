@@ -40,9 +40,30 @@
       font-size:24px;
     }
 
+    /* СТИЛЬ ДЛЯ ДАТЫ: КРУПНО И С ЭФФЕКТОМ */
     .date-info {
       color:#008080;
-      font-size:18px;
+      font-size:20px;
+      font-weight: bold;
+      background: rgba(0,0,0,0.3);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #008080;
+    }
+
+    .blink-date {
+      color: #0ff; /* Бирюзовый цвет */
+      font-size: 32px; /* Крупный шрифт */
+      display: inline-block;
+      margin-left: 10px;
+      text-shadow: 0 0 10px #0ff;
+      animation: pulse-animation 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-animation {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.05); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
     .table-container {
@@ -208,7 +229,8 @@
 
     @media (max-width: 900px) {
       .table-container { width:95%; }
-      .header { padding:12px 4%; }
+      .header { padding:12px 4%; flex-direction: column; text-align: center; gap: 10px; }
+      .blink-date { font-size: 24px; }
     }
   </style>
 </head>
@@ -367,7 +389,8 @@
     const kBtn = document.getElementById('secret-btn-kovalchyk');
     if (kBtn) {
       kBtn.addEventListener('click', () => {
-        const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
+        // Извлекаем чистую дату из текстового содержимого (игнорируя теги)
+        const lastDateStr = document.getElementById('date-info').textContent.replace('DATE:', '').trim();
         const records = combinedDataCache.filter(r => 
           r.inspector === 'KOVALCHYK Y.' && 
           (r.date || '').split(' ')[0] === lastDateStr &&
@@ -397,7 +420,7 @@
 
     function openModal(name) {
       copyBtn.style.display = "none";
-      const lastDateStr = document.getElementById('date-info').textContent.split(':')[1].trim();
+      const lastDateStr = document.getElementById('date-info').textContent.replace('DATE:', '').trim();
       const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
       if (!records.length) {
         modalBody.innerHTML = "<p>Brak данных.</p>";
@@ -478,13 +501,17 @@
       const lastDate = getLastDate(combinedDataCache);
       let lastDateStr = lastDate ? lastDate.toISOString().split('T')[0] : "";
       const dInfo = document.getElementById('date-info');
-      if(dInfo) dInfo.textContent = `DATE: ${lastDateStr || '--'}`;
+      
+      // Обновляем дату с применением анимации мигания
+      if(dInfo) {
+          dInfo.innerHTML = `DATE: <span class="blink-date">${lastDateStr || '--'}</span>`;
+      }
+      
       const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === lastDateStr);
       displayCombinedStats(filtered);
       displayDiagonalStats(filtered);
     }
 
-    // ТЕПЕРЬ ПОИСК ПОКАЗЫВАЕТ ВСЕ СОВПАДЕНИЯ
     async function searchSerial(serial) {
       const s1 = await getData('FI Station KOVALCHYK Y.', sheetId);
       const s2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
@@ -495,7 +522,6 @@
       
       if (allMatches.length === 0) return [];
       
-      // Сортировка от новых к старым
       allMatches.sort((a, b) => {
         const dateA = parseDatePart(a[0]) || new Date(0);
         const dateB = parseDatePart(b[0]) || new Date(0);
