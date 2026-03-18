@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LCDR LIVE DATA</title>
+  <title>LCDR LIVE DATA 2026</title>
 
   <style>
     body {
-      background: url('https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-iriser-1366957.jpg')
-                  no-repeat center center fixed;
+      background: url('https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-iriser-1366957.jpg') no-repeat center center fixed;
       background-size: cover;
       color:#fff;
       font-family: Arial, sans-serif;
-      transition: background 1s ease-in-out;
+      transition: background 1.5s ease-in-out;
+      margin: 0;
     }
 
     body::before {
       content:"";
       position: fixed;
       top:0; left:0; width:100%; height:100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.55);
       z-index:-1;
     }
 
@@ -28,29 +28,19 @@
       justify-content:space-between;
       align-items:center;
       padding:20px 10%;
-      background-color: rgba(17,17,17,0.7);
+      background-color: rgba(17,17,17,0.8);
+      border-bottom: 2px solid #008080;
     }
 
-    .header h1 { margin:0; color:#008080; font-size:24px; }
+    .header h1 { margin:0; color:#008080; font-size:24px; text-transform: uppercase; }
 
     .date-info {
       color:#0ff; font-size:22px; font-weight: bold;
-      background: rgba(0,0,0,0.3); padding: 8px 15px;
+      background: rgba(0,0,0,0.4); padding: 8px 15px;
       border-radius: 8px; border: 1px solid #008080;
     }
 
-    @keyframes row-pulse {
-      0% { background-color: rgba(0, 255, 255, 0); }
-      50% { background-color: rgba(0, 255, 255, 0.25); }
-      100% { background-color: rgba(0, 255, 255, 0); }
-    }
-
-    .blink-row {
-      animation: row-pulse 2s infinite ease-in-out;
-      border-left: 5px solid #0ff !important;
-    }
-
-    .table-container { width:80%; margin:24px auto; }
+    .table-container { width:85%; margin:24px auto; }
 
     .table-header {
       background-color:#008080; color:#000; font-weight:bold; font-size:18px;
@@ -58,60 +48,65 @@
       display: flex; justify-content: space-between; align-items: center;
     }
 
-    .toggle-btn { margin:8px 0; font-size:20px; cursor:pointer; background:none; border:none; color:#0ff; }
+    .toggle-btn { font-size:20px; cursor:pointer; background:none; border:none; color:#0ff; }
 
-    table { width:100%; border-collapse:collapse; background-color:#5555559e; border-radius:0 0 10px 10px; }
-    table, th, td { border:1px solid #fff; }
-    th, td { padding:10px; text-align:center; }
-    th { font-weight:bold; font-size:16px; }
-    td { font-size:16px; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; background-color:rgba(85, 85, 85, 0.62); border-radius:0 0 10px 10px; overflow: hidden; }
+    th, td { border:1px solid rgba(255,255,255,0.3); padding:10px; text-align:center; }
+    th { font-weight:bold; font-size:16px; background: rgba(0, 128, 128, 0.5); }
+    td { font-size:16px; }
 
-    .total-row { font-weight:bold; background-color:#333; color:#008080; }
-    .sum-col { background-color:#222; color:#0ff; }
+    .total-row { font-weight:bold; background-color:#222; color:#008080; }
+    .sum-col { background-color:rgba(0,0,0,0.4); color:#0ff; font-weight: bold; }
 
-    #search { width:80%; padding:12px; font-size:16px; border-radius:5px; border:none; margin:20px auto; display:block; }
-    #search-result table { margin-top:10px; border:2px solid #0ff; }
+    #search { width:80%; padding:12px; font-size:16px; border-radius:25px; border:none; margin:20px auto; display:block; text-align: center; background: rgba(255,255,255,0.9); }
 
+    @keyframes row-pulse {
+      0% { background-color: rgba(0, 255, 255, 0); }
+      50% { background-color: rgba(0, 255, 255, 0.3); }
+      100% { background-color: rgba(0, 255, 255, 0); }
+    }
+    .blink-row { animation: row-pulse 2s infinite ease-in-out; border: 2px solid #0ff !important; }
+
+    /* Модалка */
     #modal {
       display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-      background: rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;
+      background: rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:10000;
     }
     #modal.show { display:flex; }
     #modal-content {
-      background:#222; color:#0ff; padding:20px; border:2px solid #0ff;
-      border-radius:10px; max-height:80%; overflow:auto; width:320px;
+      background:#1a1a1a; color:#0ff; padding:20px; border:2px solid #008080;
+      border-radius:10px; max-height:85%; overflow:auto; width:90%; max-width:1100px;
     }
-    #copy-btn { background: #0ff; color: #000; border: none; padding: 5px 10px; cursor: pointer; font-weight: bold; margin-left: 10px; margin-bottom: 10px; }
-    #secret-btn-kovalchyk { cursor: pointer; opacity: 0.1; font-size: 14px; transition: opacity 0.3s; user-select: none; padding: 0 5px; }
-    #secret-btn-kovalchyk:hover { opacity: 1; }
+    #close-modal { background: #008080; color: #000; border: none; padding: 5px 15px; cursor: pointer; font-weight: bold; margin-bottom: 10px; border-radius: 4px; }
+    #copy-btn { background: #0ff; color: #000; border: none; padding: 5px 15px; cursor: pointer; font-weight: bold; margin-left: 10px; border-radius: 4px; }
 
     @media (max-width: 900px) {
-      .table-container { width:95%; }
-      .header { padding:12px 4%; flex-direction: column; text-align: center; gap: 10px; }
+      .table-container { width:98%; }
+      .header { padding:10px 5%; flex-direction: column; text-align: center; gap: 10px; }
     }
   </style>
 </head>
 <body>
+
   <div class="header">
     <h1>LCDR LIVE DATA 2026</h1>
     <div class="date-info" id="date-info">DATE: --</div>
   </div>
 
   <div class="table-container">
-    <input type="text" id="search" placeholder="Podaj SN / pn czesci">
+    <input type="text" id="search" placeholder="Podaj SN / pn czesci (Нажми Enter)">
     <div id="search-result"></div>
   </div>
 
   <div class="table-container">
-    <button id="overview-toggle" class="toggle-btn">👁</button>
+    <div class="table-header">
+      <span>FI Station Overview</span>
+      <button id="overview-toggle" class="toggle-btn">👁</button>
+    </div>
     <div id="overview-block">
-      <div class="table-header">
-        <span>FI Station Overview</span>
-        <span id="secret-btn-kovalchyk">·</span>
-      </div>
       <table id="combined-table">
         <thead>
-          <tr><th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th><th>SCRAP TTL</th><th>SCRAP PNLA</th><th>SUMA CALKOWITA</th></tr>
+          <tr><th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th><th>SCRAP TTL</th><th>SCRAP PNLA</th><th class="sum-col">TOTAL</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -119,9 +114,11 @@
   </div>
 
   <div class="table-container">
-    <button id="diag-toggle" class="toggle-btn">👁</button>
+    <div class="table-header">
+      <span>FI Station Diagonals</span>
+      <button id="diag-toggle" class="toggle-btn">👁</button>
+    </div>
     <div id="diag-block">
-      <div class="table-header">FI Station Diagonals</div>
       <table id="diag-table">
         <thead></thead>
         <tbody></tbody>
@@ -131,8 +128,9 @@
 
   <div id="modal">
     <div id="modal-content">
-      <button id="copy-btn">Copy SN</button>
-      <div id="modal-body"></div>
+      <button id="close-modal">CLOSE</button>
+      <button id="copy-btn">COPY ALL SN</button>
+      <div id="modal-body" style="margin-top:15px;"></div>
     </div>
   </div>
 
@@ -140,8 +138,9 @@
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8';
-    let currentLastDate = "";
+    
     let combinedDataCache = [];
+    let currentLastDate = "";
 
     function buildSheetURL(spreadsheetId, sheetName) {
       return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
@@ -150,13 +149,11 @@
     async function getData(sheetName, spreadsheetId = sheetId) {
       try {
         const res = await fetch(buildSheetURL(spreadsheetId, sheetName));
-        if (!res.ok) throw new Error(res.statusText);
+        if (!res.ok) return [];
         const data = await res.json();
         return data.values || [];
       } catch (e) { return []; }
     }
-
-    function mapRow(r) { return { date: r[0]||"", serial: r[2]||"", status: r[4]||"", name: r[5]||"", ocAfterRepair: r[9]||"", comment: r[10]||"" }; }
 
     function parseDatePart(val) {
       if (!val) return null;
@@ -171,37 +168,35 @@
     function extractDiagonal(serial) {
       if (!serial) return null;
       const s = serial.trim();
-      const diagonalMapPrefix = { 'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50 };
-      const diagonalMapSuffix = { '860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24 };
-      if (s.length >= 3 && diagonalMapPrefix[s.substr(0,3)]) return diagonalMapPrefix[s.substr(0,3)];
-      if (s.length >= 6 && diagonalMapSuffix[s.substr(3,3)]) return diagonalMapSuffix[s.substr(3,3)];
-      return diagonalMapSuffix[s.slice(-3)] || null;
+      const pMap = { 'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50 };
+      const sMap = { '860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24 };
+      if (s.length >= 3 && pMap[s.substr(0,3)]) return pMap[s.substr(0,3)];
+      if (s.length >= 6 && sMap[s.substr(3,3)]) return sMap[s.substr(3,3)];
+      return sMap[s.slice(-3)] || null;
     }
 
     async function updateStats() {
-      // 1. Загружаем данные без очистки экрана
-      const [sheetK, sheetU, sheetA] = await Promise.all([
+      const [sK, sU, sA] = await Promise.all([
         getData('FI Station KOVALCHYK Y.'),
         getData('FI Station 2 ULANOVYCH.R'),
         getData('2024', sheetIdArchive)
       ]);
-      
-      const newCache = [
-        ...(sheetK.slice(1) || []).map(r => ({ ...mapRow(r), inspector: 'KOVALCHYK Y.' })),
-        ...(sheetU.slice(1) || []).map(r => ({ ...mapRow(r), inspector: 'ULANOVYCH.R' })),
-        ...(sheetA.slice(1) || []).map(r => ({ ...mapRow(r), inspector: 'ARCHIVE' }))
+
+      const mapRow = (r) => ({ date: r[0]||"", serial: r[2]||"", status: r[4]||"", name: r[5]||"", ocAfterRepair: r[9]||"", comment: r[10]||"" });
+
+      combinedDataCache = [
+        ...sK.slice(1).map(mapRow),
+        ...sU.slice(1).map(mapRow),
+        ...sA.slice(1).map(mapRow)
       ];
 
-      if (newCache.length === 0) return; // Если Google вернул пустоту по ошибке, ничего не меняем
-      combinedDataCache = newCache;
-
       const dates = combinedDataCache.map(r => parseDatePart(r.date)).filter(d => d);
-      currentLastDate = dates.length ? new Date(Math.max(...dates)).toISOString().split('T')[0] : "";
-      document.getElementById('date-info').textContent = `DATE: ${currentLastDate}`;
+      if (dates.length) {
+        currentLastDate = new Date(Math.max(...dates)).toISOString().split('T')[0];
+        document.getElementById('date-info').textContent = `DATE: ${currentLastDate}`;
+      }
 
       const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === currentLastDate);
-
-      // 2. Генерируем HTML в памяти
       renderOverview(filtered);
       renderDiagonals(filtered);
     }
@@ -209,88 +204,104 @@
     function renderOverview(filtered) {
       const stats = {};
       let tNDF=0, tOK=0, tWAIT=0, tTTL=0, tPNLA=0, gTotal=0;
+
       filtered.forEach(r => {
         const n = r.name || 'UNKNOWN';
-        if (!stats[n]) stats[n] = { NDF:0, OK:0, WAITING:0, 'SCRAP TTL':0, 'SCRAP PNLA':0, total:0 };
+        if (!stats[n]) stats[n] = { NDF:0, OK:0, WAITING:0, TTL:0, PNLA:0, total:0 };
         if (r.status === "NDF") { stats[n].NDF++; tNDF++; }
         else if (r.status === "OK") { stats[n].OK++; tOK++; }
         else if (r.status === "WAITING") { stats[n].WAITING++; tWAIT++; }
-        else if (r.status === "SCRAP TTL") { stats[n]["SCRAP TTL"]++; tTTL++; }
-        else if (r.status === "SCRAP PNLA") { stats[n]["SCRAP PNLA"]++; tPNLA++; }
+        else if (r.status === "SCRAP TTL") { stats[n].TTL++; tTTL++; }
+        else if (r.status === "SCRAP PNLA") { stats[n].PNLA++; tPNLA++; }
         stats[n].total++; gTotal++;
       });
 
-      let html = "";
-      for (let name in stats) {
-        html += `<tr><td onclick="openModal('${name}')">${name}</td><td>${stats[name].NDF}</td><td>${stats[name].OK}</td><td>${stats[name].WAITING}</td><td>${stats[name]['SCRAP TTL']}</td><td>${stats[name]['SCRAP PNLA']}</td><td class="sum-col">${stats[name].total}</td></tr>`;
-      }
-      html += `<tr class="total-row"><td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td></tr>`;
+      let html = Object.entries(stats).map(([name, s]) => `
+        <tr>
+          <td onclick="openModal('${name}')" style="cursor:pointer; color:#0ff;">${name}</td>
+          <td>${s.NDF}</td><td>${s.OK}</td><td>${s.WAITING}</td><td>${s.TTL}</td><td>${s.PNLA}</td><td class="sum-col">${s.total}</td>
+        </tr>`).join('');
       
-      // 3. Мгновенная замена
+      html += `<tr class="total-row"><td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td></tr>`;
       document.querySelector('#combined-table tbody').innerHTML = html;
     }
 
     function renderDiagonals(filtered) {
       const diagStats = {};
-      filtered.forEach(({name, serial, status}) => {
-        if (status !== "OK" && status !== "NDF") return;
-        const diag = extractDiagonal(serial); if (!diag) return;
-        const nm = name || 'UNKNOWN';
-        if (!diagStats[nm]) diagStats[nm] = {};
-        diagStats[nm][diag] = (diagStats[nm][diag] || 0) + 1;
+      const allDiags = new Set();
+      filtered.forEach(r => {
+        if (r.status !== "OK" && r.status !== "NDF") return;
+        const d = extractDiagonal(r.serial); if (!d) return;
+        const n = r.name || 'UNKNOWN';
+        if (!diagStats[n]) diagStats[n] = {};
+        diagStats[n][d] = (diagStats[n][d] || 0) + 1;
+        allDiags.add(d);
       });
-      const allDiagonals = new Set();
-      Object.values(diagStats).forEach(obj => Object.keys(obj).forEach(k => allDiagonals.add(Number(k))));
-      const sortedDiags = Array.from(allDiagonals).sort((a,b) => a - b);
-
-      let headHtml = `<tr><th>NAME</th>${sortedDiags.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
-      let bodyHtml = "";
-      Object.entries(diagStats).forEach(([name, diags]) => {
+      const sorted = Array.from(allDiags).sort((a,b) => a-b);
+      const head = `<tr><th>NAME</th>${sorted.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUM</th></tr>`;
+      const body = Object.entries(diagStats).map(([name, ds]) => {
         let sum = 0;
-        let cells = sortedDiags.map(d => { const v = diags[d]||0; sum+=v; return `<td>${v}</td>`; }).join('');
-        bodyHtml += `<tr><td>${name}</td>${cells}<td class="sum-col">${sum}</td></tr>`;
-      });
-      document.querySelector('#diag-table thead').innerHTML = headHtml;
-      document.querySelector('#diag-table tbody').innerHTML = bodyHtml;
+        let cells = sorted.map(d => { const v = ds[d]||0; sum+=v; return `<td>${v}</td>`; }).join('');
+        return `<tr><td>${name}</td>${cells}<td class="sum-col">${sum}</td></tr>`;
+      }).join('');
+      document.querySelector('#diag-table thead').innerHTML = head;
+      document.querySelector('#diag-table tbody').innerHTML = body;
     }
 
-    // Поиск остается с логикой мигания ПОСЛЕДНЕЙ записи в результатах
+    // ИСПРАВЛЕННАЯ ФУНКЦИЯ МОДАЛКИ
+    function openModal(name) {
+      const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === currentLastDate);
+      const body = document.getElementById('modal-body');
+      
+      if (!records.length) {
+        body.innerHTML = "<p>Brak danych.</p>";
+      } else {
+        let html = `<table>
+          <thead><tr><th>Data/Time</th><th>Serial Number</th><th>Status</th><th>OC After Repair</th><th>Comment</th></tr></thead>
+          <tbody>`;
+        records.forEach(r => {
+          html += `<tr>
+            <td>${r.date}</td>
+            <td class="copyable-sn">${r.serial}</td>
+            <td style="color:${r.status==='OK'?'#0f0':'#f0f'}">${r.status}</td>
+            <td>${r.ocAfterRepair || '--'}</td>
+            <td style="text-align:left;">${r.comment || '--'}</td>
+          </tr>`;
+        });
+        html += `</tbody></table>`;
+        body.innerHTML = html;
+      }
+      document.getElementById('modal').classList.add('show');
+    }
+
+    // Поиск
     document.getElementById('search').onkeypress = async e => {
       if (e.key === 'Enter') {
         const val = e.target.value.trim();
-        const output = document.getElementById('search-result');
-        output.innerHTML = "<p>Szukam...</p>";
-        const matches = combinedDataCache.filter(r => (r.serial || '').trim() === val)
+        const out = document.getElementById('search-result');
+        out.innerHTML = "Szukam...";
+        const matches = combinedDataCache.filter(r => (r.serial || '').includes(val))
                         .sort((a,b) => (parseDatePart(b.date)||0) - (parseDatePart(a.date)||0));
         if (matches.length) {
-          let rows = matches.map((m, index) => `
-            <tr class="${index === 0 ? 'blink-row' : ''}">
-              <td>${m.date}</td><td>${m.status}</td><td>${m.name || '--'}</td><td>${m.ocAfterRepair || '--'}</td><td>${m.comment || '--'}</td>
-            </tr>`).join('');
-          output.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead><tbody>${rows}</tbody></table>`;
-        } else { output.innerHTML = "<p>Brak info!</p>"; }
+          out.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>Worker</th><th>Final</th><th>Info</th></tr></thead>
+            <tbody>${matches.map((m, i) => `<tr class="${i===0?'blink-row':''}"><td>${m.date}</td><td>${m.status}</td><td>${m.name}</td><td>${m.ocAfterRepair}</td><td>${m.comment}</td></tr>`).join('')}</tbody></table>`;
+        } else { out.innerHTML = "Brak wyników."; }
       }
     };
 
-    function openModal(name) {
-      const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === currentLastDate);
-      document.getElementById('modal-body').innerHTML = records.length ? '<table>' + records.map(r => `<tr><td>${r.serial}</td><td>${r.status}</td></tr>`).join('') + '</table>' : "<p>Brak данных.</p>";
-      document.getElementById('modal').classList.add('show');
-    }
-
-    document.getElementById('secret-btn-kovalchyk').onclick = () => {
-      const records = combinedDataCache.filter(r => r.inspector === 'KOVALCHYK Y.' && (r.date || '').split(' ')[0] === currentLastDate && ['OK','NDF','SCRAP TTL'].includes(r.status));
-      document.getElementById('modal-body').innerHTML = records.length ? records.map(r => `<div class="sn-list-item">${r.serial}</div>`).join('') : "Brak SN.";
-      document.getElementById('modal').classList.add('show');
+    document.getElementById('close-modal').onclick = () => document.getElementById('modal').classList.remove('show');
+    document.getElementById('copy-btn').onclick = () => {
+      const sns = Array.from(document.querySelectorAll('.copyable-sn')).map(td => td.innerText).join('\n');
+      navigator.clipboard.writeText(sns).then(() => alert('Copied ' + sns.split('\n').length + ' SNs'));
     };
 
-    window.onclick = e => { if (e.target == document.getElementById('modal')) document.getElementById('modal').classList.remove('show'); };
     document.getElementById('overview-toggle').onclick = () => { const b = document.getElementById('overview-block'); b.style.display = b.style.display==='none'?'block':'none'; };
     document.getElementById('diag-toggle').onclick = () => { const b = document.getElementById('diag-block'); b.style.display = b.style.display==='none'?'block':'none'; };
 
     updateStats();
     setInterval(updateStats, 25000);
 
+    // ВСЕ ТВОИ ФОНЫ
     const backgrounds = [
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
@@ -305,6 +316,9 @@
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sanaan-3075993.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-simon73-1183099.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pengwhan-1767434.jpg",
+      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harry-shum-17627821-15984177.jpg",
+      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-am83-12709111.jpg",
+      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-njeromin-12766489.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-533923.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-robshumski-1903702.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-elti-meshau-107925-333850.jpg",
@@ -324,14 +338,16 @@
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-souvenirpixels-1519088.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg"
+      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg",
+      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
     ];
+
     let bgIdx = 0;
     setInterval(() => {
       bgIdx = (bgIdx + 1) % backgrounds.length;
       document.body.style.background = `url('${backgrounds[bgIdx]}') no-repeat center center fixed`;
       document.body.style.backgroundSize = "cover";
-    }, 180000);
+    }, 180000); // 3 минуты
   </script>
 </body>
 </html>
