@@ -196,7 +196,24 @@ border-radius: 4px;
 margin-left: 10px;
 }
 
-/* Секретная кнопка Юры */
+/* Секретные кнопки */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#bulk-search-btn {
+    cursor: pointer;
+    font-size: 18px;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+#bulk-search-btn:hover {
+    opacity: 1;
+}
+
 #secret-btn-kovalchyk {
 cursor: pointer;
 opacity: 0.1;
@@ -215,6 +232,30 @@ padding: 5px;
 border-bottom: 1px dashed #444;
 font-family: monospace;
 font-size: 16px;
+}
+
+/* Стили для массового поиска */
+#bulk-input {
+    width: 100%;
+    height: 120px;
+    background: #111;
+    color: #0ff;
+    border: 1px solid #008080;
+    padding: 10px;
+    margin-top: 10px;
+    font-family: monospace;
+    resize: vertical;
+}
+
+#run-bulk-search {
+    background: #008080;
+    color: #000;
+    border: none;
+    padding: 8px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 4px;
 }
 
 @media (max-width: 900px) {
@@ -240,7 +281,10 @@ font-size: 16px;
 <div id="overview-block">
 <div class="table-header">
     <span>FI Station Overview</span>
-    <span id="secret-btn-kovalchyk">·</span>
+    <div class="header-actions">
+        <span id="bulk-search-btn" title="Masowe wyszukiwanie">🔍</span>
+        <span id="secret-btn-kovalchyk">·</span>
+    </div>
 </div>
 <table id="combined-table">
 <thead>
@@ -283,7 +327,7 @@ const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
 const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
 const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8';
 
-let combinedDataCache = []; // 
+let combinedDataCache = []; 
 
 function buildSheetURL(spreadsheetId, sheetName) {
 return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
@@ -313,7 +357,6 @@ const last3 = s.slice(-3);
 return diagonalMapSuffix[last3] || null;
 }
 
-// ДВОЙНОЙ БУФЕР
 async function fetchAndCacheData() {
     try {
         const [s1, s2, s3] = await Promise.all([
@@ -322,7 +365,6 @@ async function fetchAndCacheData() {
             getData('2024', sheetIdArchive)
         ]);
 
-       
         if (!s1 && !s2) return false;
 
         const mapR = (r, insp) => ({
@@ -337,7 +379,6 @@ async function fetchAndCacheData() {
             inspector: insp
         });
 
-        
         const shadowBuffer = [
             ...(s1 ? s1.slice(1) : []).map(r => mapR(r, 'KOVALCHYK Y.')),
             ...(s2 ? s2.slice(1) : []).map(r => mapR(r, 'ULANOVYCH.R')),
@@ -380,7 +421,7 @@ const modalClose = document.getElementById('modal-close');
 if(modalClose) modalClose.onclick = () => modal.classList.remove('show');
 if(modal) modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
 
-// фильтр мониторов из списка
+// Секретная кнопка Юры
 const secretBtn = document.getElementById('secret-btn-kovalchyk');
 if(secretBtn) {
     secretBtn.onclick = () => {
@@ -389,7 +430,6 @@ if(secretBtn) {
         const dInfoText = document.getElementById('date-info').textContent;
         const lastDateStr = dInfoText.includes(':') ? dInfoText.split(':')[1].trim() : "";
         
-        // ок ндф скрап
         const records = combinedDataCache.filter(r => 
             r.inspector === 'KOVALCHYK Y.' && 
             (r.date || '').split(' ')[0] === lastDateStr &&
@@ -397,9 +437,9 @@ if(secretBtn) {
             r.type !== 'MNT'
         );
 
-        let html = `<h4 style="margin:0 0 10px 0; color:#008080;">Kovalchyk Y. (Daily SN List - No Monitors)</h4>`;
+        let html = `<h4 style="margin:0 0 10px 0; color:#008080;"> </h4>`;
         if (!records.length) {
-            html += "<p>Brak danych za сегодня (или только мониторы).</p>";
+            html += "<p> .</p>";
             copyBtn.style.display = "none";
         } else {
             records.forEach(r => { html += `<div class="sn-list-item">${r.serial || '--'}</div>`; });
@@ -414,6 +454,50 @@ if(secretBtn) {
                 copyBtn.textContent = "Copied!";
                 setTimeout(() => copyBtn.textContent = old, 1500);
             });
+        };
+    };
+}
+
+// (логика залупа)
+const bulkSearchBtn = document.getElementById('bulk-search-btn');
+if(bulkSearchBtn) {
+    bulkSearchBtn.onclick = () => {
+        if(!modalBody || !modal) return;
+        if(copyBtn) copyBtn.style.display = "none";
+
+        modalBody.innerHTML = `
+            <h3 style="color:#0ff; margin-top:0;">Masowe wyszukiwanie (Ostatni status)</h3>
+            <p style="font-size:14px; color:#aaa;">Wklej listę SN (jeden pod drugim):</p>
+            <textarea id="bulk-input" placeholder="SN1\nSN2\nSN3..."></textarea>
+            <button id="run-bulk-search">SZUKAJ</button>
+            <div id="bulk-result" style="margin-top:20px;"></div>
+        `;
+        modal.classList.add('show');
+
+        document.getElementById('run-bulk-search').onclick = () => {
+            const text = document.getElementById('bulk-input').value;
+            const snList = text.split('\n').map(s => s.trim()).filter(s => s !== "");
+            if(!snList.length) return;
+
+            const results = [];
+            snList.forEach(sn => {
+                const matches = combinedDataCache.filter(r => (r.serial || '').trim() === sn);
+                if(matches.length) {
+                  
+                    matches.sort((a,b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
+                    results.push(matches[0]);
+                } else {
+                    results.push({ serial: sn, date: '---', status: 'NOT FOUND', name: '---', comment: 'Brak danych' });
+                }
+            });
+
+            let resHtml = `<table><tr><th>Serial</th><th>Data</th><th>Status</th><th>Naprawiacz</th><th>Info</th></tr>`;
+            results.forEach(r => {
+                const style = r.status === 'NOT FOUND' ? 'style="color:#ff5555"' : '';
+                resHtml += `<tr ${style}><td>${r.serial}</td><td>${r.date}</td><td>${r.status}</td><td>${r.name}</td><td>${r.comment}</td></tr>`;
+            });
+            resHtml += `</table>`;
+            document.getElementById('bulk-result').innerHTML = resHtml;
         };
     };
 }
@@ -525,9 +609,7 @@ if(searchInput) {
 }
 
 async function updateStats() {
-    
     const success = await fetchAndCacheData();
-    
     if (combinedDataCache.length === 0) return;
 
     const lastDate = getLastDate(combinedDataCache);
