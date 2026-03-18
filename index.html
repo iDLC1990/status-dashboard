@@ -31,7 +31,7 @@
     }
 
     .header h1 { margin:0; color:#008080; font-size:24px; }
-    .date-info { color:#008080; font-size:18px; }
+    .date-info { color:#008080; font-size:18px; font-weight: bold; }
 
     .table-container { width:80%; margin:24px auto; }
 
@@ -49,7 +49,7 @@
 
     table, th, td { border:1px solid #fff; }
     th, td { padding:10px; text-align:center; }
-    th { font-weight:bold; font-size:16px; }
+    th { font-weight:bold; font-size:16px; background: rgba(0, 128, 128, 0.3); }
     td { font-size:16px; cursor:pointer; }
 
     .total-row { font-weight:bold; background-color:#333; color:#008080; }
@@ -57,38 +57,40 @@
 
     #search {
       width:80%; padding:12px; font-size:16px; border-radius:5px;
-      border:none; margin:20px auto; display:block;
+      border:none; margin:20px auto; display:block; text-align: center;
     }
 
-    #search-result table { margin-top:10px; border:2px solid #0ff; background-color:#333; }
-    #search-result th { background-color:#008080; color:#000; }
-    #search-result td { color:#0ff; }
+    /* АНИМАЦИЯ МИГАНИЯ ДЛЯ ПОИСКА */
+    @keyframes row-pulse {
+      0% { background-color: rgba(0, 255, 255, 0); }
+      50% { background-color: rgba(0, 255, 255, 0.4); box-shadow: inset 0 0 15px #0ff; }
+      100% { background-color: rgba(0, 255, 255, 0); }
+    }
+    .blink-row { animation: row-pulse 1.5s infinite ease-in-out; border: 2px solid #0ff !important; }
 
     /* Модалка */
     #modal {
       display:none; position:fixed; top:0; left:0; width:100%; height:100%;
       background: rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;
     }
-
     #modal.show { display:flex; }
-
     #modal-content {
       background:#222; color:#0ff; padding:20px; border:2px solid #0ff;
       border-radius:10px; max-height:80%; overflow:auto; width:80%; max-width:1000px;
     }
-
-    #modal-close {
-      background:#008080; color:#000; border:none; padding:5px 10px;
-      cursor:pointer; font-weight:bold; margin-bottom:10px;
+    .modal-btns { margin-bottom: 15px; display: flex; gap: 10px; }
+    .btn-style {
+      background:#008080; color:#000; border:none; padding:8px 15px;
+      cursor:pointer; font-weight:bold; border-radius: 4px;
     }
+    .btn-copy { background: #0ff; }
 
-    #modal table { width:100%; border-collapse:collapse; }
-    #modal th, #modal td { border:1px solid #0ff; padding:8px; text-align:center; }
+    #modal th, #modal td { border:1px solid #0ff; padding:8px; text-align:center; color: #fff; }
     #modal th { background:#008080; color:#000; }
 
     @media (max-width: 900px) {
       .table-container { width:95%; }
-      .header { padding:12px 4%; }
+      .header { padding:12px 4%; flex-direction: column; gap: 10px; }
     }
   </style>
 </head>
@@ -100,7 +102,7 @@
   </div>
 
   <div class="table-container">
-    <input type="text" id="search" placeholder="Podaj SN / pn czesci">
+    <input type="text" id="search" placeholder="Wpisz SN i naciśnij Enter">
     <div id="search-result"></div>
   </div>
 
@@ -111,7 +113,7 @@
       <table id="combined-table">
         <thead>
           <tr>
-            <th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th><th>SCRAP TTL</th><th>SCRAP PNLA</th><th>SUMA CALKOWITA</th>
+            <th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th><th>SCRAP TTL</th><th>SCRAP PNLA</th><th>SUMA</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -132,7 +134,10 @@
 
   <div id="modal">
     <div id="modal-content">
-      <button id="modal-close">Закрыть</button>
+      <div class="modal-btns">
+        <button id="modal-close" class="btn-style">CLOSE</button>
+        <button id="copy-all-sn" class="btn-style btn-copy">COPY ALL SN</button>
+      </div>
       <div id="modal-body"></div>
     </div>
   </div>
@@ -185,7 +190,6 @@
       ]);
 
       const mapRow = (r) => ({ date: r[0]||"", serial: r[2]||"", status: r[4]||"", name: r[5]||"", ocAfterRepair: r[9]||"", comment: r[10]||"" });
-
       combinedDataCache = [...s1.slice(1).map(mapRow), ...s2.slice(1).map(mapRow), ...s3.slice(1).map(mapRow)];
 
       const dates = combinedDataCache.map(r => parseDatePart(r.date)).filter(d => d);
@@ -196,19 +200,23 @@
 
       const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === currentLastDate);
       
-      // Overview Render
       const stats = {};
       let tNDF=0, tOK=0, tWAIT=0, tTTL=0, tPNLA=0, gTotal=0;
       filtered.forEach(r => {
         const n = r.name || 'UNKNOWN';
         if (!stats[n]) stats[n] = { NDF:0, OK:0, WAITING:0, TTL:0, PNLA:0, total:0 };
-        if (r.status === "NDF") { stats[n].NDF++; tNDF++; }
-        else if (r.status === "OK") { stats[n].OK++; tOK++; }
-        else if (r.status === "WAITING") { stats[n].WAITING++; tWAIT++; }
-        else if (r.status === "SCRAP TTL") { stats[n].TTL++; tTTL++; }
-        else if (r.status === "SCRAP PNLA") { stats[n].PNLA++; tPNLA++; }
+        if (r.status === "NDF") stats[n].NDF++;
+        else if (r.status === "OK") stats[n].OK++;
+        else if (r.status === "WAITING") stats[n].WAITING++;
+        else if (r.status === "SCRAP TTL") stats[n].TTL++;
+        else if (r.status === "SCRAP PNLA") stats[n].PNLA++;
         stats[n].total++; gTotal++;
       });
+      tNDF = filtered.filter(r => r.status === "NDF").length;
+      tOK = filtered.filter(r => r.status === "OK").length;
+      tWAIT = filtered.filter(r => r.status === "WAITING").length;
+      tTTL = filtered.filter(r => r.status === "SCRAP TTL").length;
+      tPNLA = filtered.filter(r => r.status === "SCRAP PNLA").length;
 
       document.querySelector('#combined-table tbody').innerHTML = Object.entries(stats).map(([name, s]) => `
         <tr>
@@ -217,7 +225,6 @@
         </tr>`).join('') + `
         <tr class="total-row"><td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td></tr>`;
 
-      // Diagonals Render
       const diagStats = {};
       const allDiags = new Set();
       filtered.forEach(r => {
@@ -229,7 +236,7 @@
         allDiags.add(d);
       });
       const sorted = Array.from(allDiags).sort((a,b) => a-b);
-      document.querySelector('#diag-table thead').innerHTML = `<tr><th>NAME</th>${sorted.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+      document.querySelector('#diag-table thead').innerHTML = `<tr><th>NAME</th>${sorted.map(d => `<th>${d}"</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
       document.querySelector('#diag-table tbody').innerHTML = Object.entries(diagStats).map(([name, diags]) => {
         let sum = 0;
         let cells = sorted.map(d => { const v = diags[d]||0; sum+=v; return `<td>${v}</td>`; }).join('');
@@ -240,56 +247,47 @@
     function openModal(name) {
       const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === currentLastDate);
       const modalBody = document.getElementById('modal-body');
-      
-      if (!records.length) {
-        modalBody.innerHTML = "<p>Нет данных за текущий день</p>";
-      } else {
+      if (!records.length) { modalBody.innerHTML = "<p>Brak danych на сегодня.</p>"; } 
+      else {
         let html = '<table><tr><th>Date/Time</th><th>Serial</th><th>Status</th><th>Verdict</th><th>Comment</th></tr>';
-        records.forEach(r => {
-          html += `<tr><td>${r.date}</td><td>${r.serial}</td><td>${r.status}</td><td>${r.ocAfterRepair}</td><td>${r.comment}</td></tr>`;
-        });
+        records.forEach(r => { html += `<tr><td>${r.date}</td><td class="sn-cell">${r.serial}</td><td>${r.status}</td><td>${r.ocAfterRepair}</td><td>${r.comment}</td></tr>`; });
         modalBody.innerHTML = html + '</table>';
       }
       document.getElementById('modal').classList.add('show');
     }
 
-    // Закрытие модалки по кнопке
     document.getElementById('modal-close').onclick = () => document.getElementById('modal').classList.remove('show');
-    
-    // ЗАКРЫТИЕ ПО КЛИКУ МИМО ОКНА (НА ОВЕРЛЕЙ)
-    window.onclick = (e) => {
-      if (e.target === document.getElementById('modal')) {
-        document.getElementById('modal').classList.remove('show');
-      }
+    document.getElementById('copy-all-sn').onclick = () => {
+      const cells = document.querySelectorAll('.sn-cell');
+      const sns = Array.from(cells).map(td => td.innerText).join('\n');
+      navigator.clipboard.writeText(sns).then(() => alert('Skopiowano SN Юре!'));
     };
+    window.onclick = (e) => { if (e.target === document.getElementById('modal')) document.getElementById('modal').classList.remove('show'); };
 
-    // Поиск
+    // ПОИСК С МИГАНИЕМ
     document.getElementById('search').onkeypress = async e => {
       if (e.key === 'Enter') {
-        const val = e.target.value.trim();
+        const val = e.target.value.trim().toUpperCase();
         const output = document.getElementById('search-result');
         output.innerHTML = "Szukam...";
-        const matches = combinedDataCache.filter(r => (r.serial || '').includes(val))
+        const matches = combinedDataCache.filter(r => (r.serial || '').toUpperCase().includes(val))
                         .sort((a,b) => (parseDatePart(b.date)||0) - (parseDatePart(a.date)||0));
         if (matches.length) {
-          output.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>Worker</th><th>Final</th><th>Info</th></tr></thead>
-            <tbody>${matches.map(m => `<tr><td>${m.date}</td><td>${m.status}</td><td>${m.name}</td><td>${m.ocAfterRepair}</td><td>${m.comment}</td></tr>`).join('')}</tbody></table>`;
+          output.innerHTML = `<table style="border:2px solid #0ff; background:#333;"><thead><tr><th>Data</th><th>Status</th><th>Worker</th><th>Final</th><th>Info</th></tr></thead>
+            <tbody>${matches.map((m, index) => `
+              <tr class="${index === 0 ? 'blink-row' : ''}">
+                <td>${m.date}</td><td>${m.status}</td><td>${m.name}</td><td>${m.ocAfterRepair}</td><td>${m.comment}</td>
+              </tr>`).join('')}</tbody></table>`;
         } else { output.innerHTML = "Brak info!"; }
       }
     };
 
-    // Переключатели
-    document.getElementById('overview-toggle').onclick = () => {
-      const b = document.getElementById('overview-block'); b.style.display = b.style.display==='none'?'block':'none';
-    };
-    document.getElementById('diag-toggle').onclick = () => {
-      const b = document.getElementById('diag-block'); b.style.display = b.style.display==='none'?'block':'none';
-    };
+    document.getElementById('overview-toggle').onclick = () => { const b = document.getElementById('overview-block'); b.style.display = b.style.display==='none'?'block':'none'; };
+    document.getElementById('diag-toggle').onclick = () => { const b = document.getElementById('diag-block'); b.style.display = b.style.display==='none'?'block':'none'; };
 
     updateStats();
     setInterval(updateStats, 25000);
 
-    // ВСЕ ТВОИ ФОНЫ (39 ШТ)
     const backgrounds = [
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
