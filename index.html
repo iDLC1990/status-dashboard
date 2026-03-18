@@ -12,6 +12,7 @@
       color:#fff;
       font-family: Arial, sans-serif;
       transition: background 1s ease-in-out;
+      margin: 0;
     }
 
     body::before {
@@ -38,7 +39,21 @@
     .table-header {
       background-color:#008080; color:#000; font-weight:bold; font-size:18px;
       padding:10px 16px; border-radius:10px 10px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+
+    /* СКРЫТАЯ КНОПКА ДЛЯ ЮРЫ (ТОЧКА) */
+    .yura-dot {
+      width: 8px;
+      height: 8px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .yura-dot:hover { background: #0ff; }
 
     .toggle-btn { margin:8px 0; font-size:20px; cursor:pointer; background:none; border:none; color:#0ff; }
 
@@ -50,7 +65,7 @@
     table, th, td { border:1px solid #fff; }
     th, td { padding:10px; text-align:center; }
     th { font-weight:bold; font-size:16px; background: rgba(0, 128, 128, 0.3); }
-    td { font-size:16px; cursor:pointer; }
+    td { font-size:16px; }
 
     .total-row { font-weight:bold; background-color:#333; color:#008080; }
     .sum-col { background-color:#222; color:#0ff; }
@@ -63,7 +78,7 @@
     /* АНИМАЦИЯ МИГАНИЯ ДЛЯ ПОИСКА */
     @keyframes row-pulse {
       0% { background-color: rgba(0, 255, 255, 0); }
-      50% { background-color: rgba(0, 255, 255, 0.4); box-shadow: inset 0 0 15px #0ff; }
+      50% { background-color: rgba(0, 255, 255, 0.4); box-shadow: inset 0 0 10px #0ff; }
       100% { background-color: rgba(0, 255, 255, 0); }
     }
     .blink-row { animation: row-pulse 1.5s infinite ease-in-out; border: 2px solid #0ff !important; }
@@ -78,12 +93,10 @@
       background:#222; color:#0ff; padding:20px; border:2px solid #0ff;
       border-radius:10px; max-height:80%; overflow:auto; width:80%; max-width:1000px;
     }
-    .modal-btns { margin-bottom: 15px; display: flex; gap: 10px; }
-    .btn-style {
+    #modal-close {
       background:#008080; color:#000; border:none; padding:8px 15px;
-      cursor:pointer; font-weight:bold; border-radius: 4px;
+      cursor:pointer; font-weight:bold; border-radius: 4px; margin-bottom: 15px;
     }
-    .btn-copy { background: #0ff; }
 
     #modal th, #modal td { border:1px solid #0ff; padding:8px; text-align:center; color: #fff; }
     #modal th { background:#008080; color:#000; }
@@ -109,7 +122,10 @@
   <div class="table-container">
     <button id="overview-toggle" class="toggle-btn">👁</button>
     <div id="overview-block">
-      <div class="table-header">FI Station Overview</div>
+      <div class="table-header">
+        <span>FI Station Overview</span>
+        <div id="yura-secret-btn" class="yura-dot" title="Copy All SN"></div>
+      </div>
       <table id="combined-table">
         <thead>
           <tr>
@@ -134,10 +150,7 @@
 
   <div id="modal">
     <div id="modal-content">
-      <div class="modal-btns">
-        <button id="modal-close" class="btn-style">CLOSE</button>
-        <button id="copy-all-sn" class="btn-style btn-copy">COPY ALL SN</button>
-      </div>
+      <button id="modal-close">CLOSE</button>
       <div id="modal-body"></div>
     </div>
   </div>
@@ -201,7 +214,6 @@
       const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === currentLastDate);
       
       const stats = {};
-      let tNDF=0, tOK=0, tWAIT=0, tTTL=0, tPNLA=0, gTotal=0;
       filtered.forEach(r => {
         const n = r.name || 'UNKNOWN';
         if (!stats[n]) stats[n] = { NDF:0, OK:0, WAITING:0, TTL:0, PNLA:0, total:0 };
@@ -210,20 +222,14 @@
         else if (r.status === "WAITING") stats[n].WAITING++;
         else if (r.status === "SCRAP TTL") stats[n].TTL++;
         else if (r.status === "SCRAP PNLA") stats[n].PNLA++;
-        stats[n].total++; gTotal++;
+        stats[n].total++;
       });
-      tNDF = filtered.filter(r => r.status === "NDF").length;
-      tOK = filtered.filter(r => r.status === "OK").length;
-      tWAIT = filtered.filter(r => r.status === "WAITING").length;
-      tTTL = filtered.filter(r => r.status === "SCRAP TTL").length;
-      tPNLA = filtered.filter(r => r.status === "SCRAP PNLA").length;
 
       document.querySelector('#combined-table tbody').innerHTML = Object.entries(stats).map(([name, s]) => `
         <tr>
-          <td onclick="openModal('${name}')">${name}</td>
+          <td onclick="openModal('${name}')" style="cursor:pointer; color:#0ff; text-decoration:underline;">${name}</td>
           <td>${s.NDF}</td><td>${s.OK}</td><td>${s.WAITING}</td><td>${s.TTL}</td><td>${s.PNLA}</td><td class="sum-col">${s.total}</td>
-        </tr>`).join('') + `
-        <tr class="total-row"><td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td></tr>`;
+        </tr>`).join('');
 
       const diagStats = {};
       const allDiags = new Set();
@@ -247,7 +253,7 @@
     function openModal(name) {
       const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === currentLastDate);
       const modalBody = document.getElementById('modal-body');
-      if (!records.length) { modalBody.innerHTML = "<p>Brak danych на сегодня.</p>"; } 
+      if (!records.length) { modalBody.innerHTML = "<p>Brak danych.</p>"; } 
       else {
         let html = '<table><tr><th>Date/Time</th><th>Serial</th><th>Status</th><th>Verdict</th><th>Comment</th></tr>';
         records.forEach(r => { html += `<tr><td>${r.date}</td><td class="sn-cell">${r.serial}</td><td>${r.status}</td><td>${r.ocAfterRepair}</td><td>${r.comment}</td></tr>`; });
@@ -257,14 +263,16 @@
     }
 
     document.getElementById('modal-close').onclick = () => document.getElementById('modal').classList.remove('show');
-    document.getElementById('copy-all-sn').onclick = () => {
-      const cells = document.querySelectorAll('.sn-cell');
-      const sns = Array.from(cells).map(td => td.innerText).join('\n');
-      navigator.clipboard.writeText(sns).then(() => alert('Skopiowano SN Юре!'));
+
+    // СКРЫТАЯ КНОПКА КОПИРОВАНИЯ (ДЛЯ ЮРЫ)
+    document.getElementById('yura-secret-btn').onclick = () => {
+      const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === currentLastDate);
+      const sns = filtered.map(r => r.serial).filter(s => s).join('\n');
+      navigator.clipboard.writeText(sns).then(() => alert('Skopiowano wszystkie SN z dzisiaj!'));
     };
+
     window.onclick = (e) => { if (e.target === document.getElementById('modal')) document.getElementById('modal').classList.remove('show'); };
 
-    // ПОИСК С МИГАНИЕМ
     document.getElementById('search').onkeypress = async e => {
       if (e.key === 'Enter') {
         const val = e.target.value.trim().toUpperCase();
@@ -274,10 +282,7 @@
                         .sort((a,b) => (parseDatePart(b.date)||0) - (parseDatePart(a.date)||0));
         if (matches.length) {
           output.innerHTML = `<table style="border:2px solid #0ff; background:#333;"><thead><tr><th>Data</th><th>Status</th><th>Worker</th><th>Final</th><th>Info</th></tr></thead>
-            <tbody>${matches.map((m, index) => `
-              <tr class="${index === 0 ? 'blink-row' : ''}">
-                <td>${m.date}</td><td>${m.status}</td><td>${m.name}</td><td>${m.ocAfterRepair}</td><td>${m.comment}</td>
-              </tr>`).join('')}</tbody></table>`;
+            <tbody>${matches.map((m, idx) => `<tr class="${idx === 0 ? 'blink-row' : ''}"><td>${m.date}</td><td>${m.status}</td><td>${m.name}</td><td>${m.ocAfterRepair}</td><td>${m.comment}</td></tr>`).join('')}</tbody></table>`;
         } else { output.innerHTML = "Brak info!"; }
       }
     };
