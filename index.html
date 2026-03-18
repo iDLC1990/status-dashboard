@@ -282,7 +282,7 @@ font-size: 16px;
 <div class="table-header">
     <span>FI Station Overview</span>
     <div class="header-actions">
-        <span id="bulk-search-btn" title="Masowe wyszukiwanie">🔍</span>
+        <span id="bulk-search-btn" title=" ">🔍</span>
         <span id="secret-btn-kovalchyk">·</span>
     </div>
 </div>
@@ -465,8 +465,8 @@ if(bulkSearchBtn) {
         if(copyBtn) copyBtn.style.display = "none";
 
         modalBody.innerHTML = `
-            <h3 style="color:#0ff; margin-top:0;">Masowe wyszukiwanie (Ostatni status)</h3>
-            <p style="font-size:14px; color:#aaa;">Wklej listę SN (jeden pod drugim):</p>
+            <h3 style="color:#0ff; margin-top:0;"> </h3>
+            <p style="font-size:14px; color:#aaa;"> </p>
             <textarea id="bulk-input" placeholder="SN1\nSN2\nSN3..."></textarea>
             <button id="run-bulk-search">SZUKAJ</button>
             <div id="bulk-result" style="margin-top:20px;"></div>
@@ -509,7 +509,7 @@ function openModal(name) {
     const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
 
     if (!records.length) {
-        modalBody.innerHTML = "<p>Brak danych za сегодня.</p>";
+        modalBody.innerHTML = "<p> </p>";
     } else {
         let html = '<table><tr><th>Serial</th><th>Type</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
         records.forEach(r => {
@@ -602,7 +602,7 @@ if(searchInput) {
                     <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
                     <tbody>${rowsHtml}</tbody></table>`;
                 } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
-            } catch (err) { output.innerHTML = "<p style='color:red'>Błąd поиска!</p>"; }
+            } catch (err) { output.innerHTML = "<p style='color:red'> </p>"; }
         }
     });
 }
