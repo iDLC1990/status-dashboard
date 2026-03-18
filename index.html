@@ -137,7 +137,6 @@
       color:#0ff;
     }
 
-    /* Модалка */
     #modal {
       display:none;
       position:fixed;
@@ -187,7 +186,6 @@
       margin-bottom: 10px;
     }
 
-    /* Юра кнопка */
     #secret-btn-kovalchyk {
       cursor: pointer;
       opacity: 0.1; 
@@ -262,6 +260,7 @@
 
   <div id="modal">
     <div id="modal-content">
+      <button id="modal-close">Закрыть</button>
       <button id="copy-btn">Copy SN</button>
       <div id="modal-body"></div>
     </div>
@@ -360,14 +359,12 @@
     const modalBody = document.getElementById('modal-body');
     const copyBtn = document.getElementById('copy-btn');
 
-
     if(document.getElementById('modal-close')) {
       document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('show'));
     }
     
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
 
-    // кнопка юра
     const kBtn = document.getElementById('secret-btn-kovalchyk');
     if (kBtn) {
       kBtn.addEventListener('click', () => {
@@ -488,24 +485,31 @@
       displayDiagonalStats(filtered);
     }
 
+    // ТЕПЕРЬ ПОИСК ПОКАЗЫВАЕТ ВСЕ СОВПАДЕНИЯ
     async function searchSerial(serial) {
       const s1 = await getData('FI Station KOVALCHYK Y.', sheetId);
       const s2 = await getData('FI Station 2 ULANOVYCH.R', sheetId);
       const s3 = await getData('2024', sheetIdArchive);
       const combined = [...s1.slice(1), ...s2.slice(1), ...s3.slice(1)];
+      
       const allMatches = combined.filter(r => (r[2] || '').trim() === serial);
+      
       if (allMatches.length === 0) return [];
+      
+      // Сортировка от новых к старым
       allMatches.sort((a, b) => {
         const dateA = parseDatePart(a[0]) || new Date(0);
         const dateB = parseDatePart(b[0]) || new Date(0);
         return dateB - dateA; 
       });
-      const latestDateStr = (allMatches[0][0] || "").split(' ')[0];
-      return allMatches
-        .filter(r => (r[0] || "").split(' ')[0] === latestDateStr)
-        .map(r => ({
-          date: r[0] || "--", status: r[4] || "--", nameF: r[5] || "--", nameG: r[6] || "--", info: r[10] || "--"
-        }));
+      
+      return allMatches.map(r => ({
+        date: r[0] || "--", 
+        status: r[4] || "--", 
+        nameF: r[5] || "--", 
+        nameG: r[6] || "--", 
+        info: r[10] || "--"
+      }));
     }
 
     const searchInput = document.getElementById('search');
@@ -519,7 +523,6 @@
           const data = await searchSerial(serial);
           if (data.length) {
             output.innerHTML = `
-              <p style="color:#0f0; font-size:12px;">Data ostatniej aktywności: ${data[0].date.split(' ')[0]}</p>
               <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
               <tbody>${data.map(d => `<tr><td>${d.date}</td><td>${d.status}</td><td>${d.nameF}</td><td>${d.nameG}</td><td>${d.info}</td></tr>`).join('')}</tbody></table>`;
           } else { output.innerHTML = "<p>Brak info!</p>"; }
@@ -540,7 +543,7 @@
     setInterval(updateStats, 25000);
 
     const backgrounds = [
-     "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
+      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-1526713.jpg",
@@ -552,18 +555,13 @@
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rpnickson-2478248.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sanaan-3075993.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-simon73-1183099.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pengwhan-1767434.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harry-shum-17627821-15984177.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-am83-12709111.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-njeromin-12766489.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-533923.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-robshumski-1903702.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-elti-meshau-107925-333850.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harun-tan-2311991-3980364.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joyston-judah-331625-933054.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-464336.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-326055.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-35857.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jahoo-388415.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-therato-1933320.jpg",
@@ -577,8 +575,7 @@
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-souvenirpixels-1519088.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg",
-      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
+      "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg"
     ];
     let bgIndex = 0;
     setInterval(() => {
