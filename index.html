@@ -11,15 +11,14 @@
       background-size: cover;
       color:#fff;
       font-family: Arial, sans-serif;
-      transition: background 1.5s ease-in-out;
-      margin: 0;
+      transition: background 1s ease-in-out;
     }
 
     body::before {
       content:"";
       position: fixed;
       top:0; left:0; width:100%; height:100%;
-      background: rgba(0,0,0,0.55);
+      background: rgba(0,0,0,0.5);
       z-index:-1;
     }
 
@@ -28,61 +27,68 @@
       justify-content:space-between;
       align-items:center;
       padding:20px 10%;
-      background-color: rgba(17,17,17,0.8);
-      border-bottom: 2px solid #008080;
+      background-color: rgba(17,17,17,0.7);
     }
 
-    .header h1 { margin:0; color:#008080; font-size:24px; text-transform: uppercase; }
+    .header h1 { margin:0; color:#008080; font-size:24px; }
+    .date-info { color:#008080; font-size:18px; }
 
-    .date-info {
-      color:#0ff; font-size:22px; font-weight: bold;
-      background: rgba(0,0,0,0.4); padding: 8px 15px;
-      border-radius: 8px; border: 1px solid #008080;
-    }
-
-    .table-container { width:85%; margin:24px auto; }
+    .table-container { width:80%; margin:24px auto; }
 
     .table-header {
       background-color:#008080; color:#000; font-weight:bold; font-size:18px;
       padding:10px 16px; border-radius:10px 10px 0 0;
-      display: flex; justify-content: space-between; align-items: center;
     }
 
-    .toggle-btn { font-size:20px; cursor:pointer; background:none; border:none; color:#0ff; }
+    .toggle-btn { margin:8px 0; font-size:20px; cursor:pointer; background:none; border:none; color:#0ff; }
 
-    table { width:100%; border-collapse:collapse; background-color:rgba(85, 85, 85, 0.62); border-radius:0 0 10px 10px; overflow: hidden; }
-    th, td { border:1px solid rgba(255,255,255,0.3); padding:10px; text-align:center; }
-    th { font-weight:bold; font-size:16px; background: rgba(0, 128, 128, 0.5); }
-    td { font-size:16px; }
-
-    .total-row { font-weight:bold; background-color:#222; color:#008080; }
-    .sum-col { background-color:rgba(0,0,0,0.4); color:#0ff; font-weight: bold; }
-
-    #search { width:80%; padding:12px; font-size:16px; border-radius:25px; border:none; margin:20px auto; display:block; text-align: center; background: rgba(255,255,255,0.9); }
-
-    @keyframes row-pulse {
-      0% { background-color: rgba(0, 255, 255, 0); }
-      50% { background-color: rgba(0, 255, 255, 0.3); }
-      100% { background-color: rgba(0, 255, 255, 0); }
+    table {
+      width:100%; border-collapse:collapse;
+      background-color:#5555559e; border-radius:0 0 10px 10px;
     }
-    .blink-row { animation: row-pulse 2s infinite ease-in-out; border: 2px solid #0ff !important; }
+
+    table, th, td { border:1px solid #fff; }
+    th, td { padding:10px; text-align:center; }
+    th { font-weight:bold; font-size:16px; }
+    td { font-size:16px; cursor:pointer; }
+
+    .total-row { font-weight:bold; background-color:#333; color:#008080; }
+    .sum-col { background-color:#222; color:#0ff; }
+
+    #search {
+      width:80%; padding:12px; font-size:16px; border-radius:5px;
+      border:none; margin:20px auto; display:block;
+    }
+
+    #search-result table { margin-top:10px; border:2px solid #0ff; background-color:#333; }
+    #search-result th { background-color:#008080; color:#000; }
+    #search-result td { color:#0ff; }
 
     /* Модалка */
     #modal {
       display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-      background: rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:10000;
+      background: rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;
     }
+
     #modal.show { display:flex; }
+
     #modal-content {
-      background:#1a1a1a; color:#0ff; padding:20px; border:2px solid #008080;
-      border-radius:10px; max-height:85%; overflow:auto; width:90%; max-width:1100px;
+      background:#222; color:#0ff; padding:20px; border:2px solid #0ff;
+      border-radius:10px; max-height:80%; overflow:auto; width:80%; max-width:1000px;
     }
-    #close-modal { background: #008080; color: #000; border: none; padding: 5px 15px; cursor: pointer; font-weight: bold; margin-bottom: 10px; border-radius: 4px; }
-    #copy-btn { background: #0ff; color: #000; border: none; padding: 5px 15px; cursor: pointer; font-weight: bold; margin-left: 10px; border-radius: 4px; }
+
+    #modal-close {
+      background:#008080; color:#000; border:none; padding:5px 10px;
+      cursor:pointer; font-weight:bold; margin-bottom:10px;
+    }
+
+    #modal table { width:100%; border-collapse:collapse; }
+    #modal th, #modal td { border:1px solid #0ff; padding:8px; text-align:center; }
+    #modal th { background:#008080; color:#000; }
 
     @media (max-width: 900px) {
-      .table-container { width:98%; }
-      .header { padding:10px 5%; flex-direction: column; text-align: center; gap: 10px; }
+      .table-container { width:95%; }
+      .header { padding:12px 4%; }
     }
   </style>
 </head>
@@ -94,19 +100,19 @@
   </div>
 
   <div class="table-container">
-    <input type="text" id="search" placeholder="Podaj SN / pn czesci (Нажми Enter)">
+    <input type="text" id="search" placeholder="Podaj SN / pn czesci">
     <div id="search-result"></div>
   </div>
 
   <div class="table-container">
-    <div class="table-header">
-      <span>FI Station Overview</span>
-      <button id="overview-toggle" class="toggle-btn">👁</button>
-    </div>
+    <button id="overview-toggle" class="toggle-btn">👁</button>
     <div id="overview-block">
+      <div class="table-header">FI Station Overview</div>
       <table id="combined-table">
         <thead>
-          <tr><th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th><th>SCRAP TTL</th><th>SCRAP PNLA</th><th class="sum-col">TOTAL</th></tr>
+          <tr>
+            <th>NAME</th><th>NDF</th><th>OK</th><th>WAITING</th><th>SCRAP TTL</th><th>SCRAP PNLA</th><th>SUMA CALKOWITA</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -114,11 +120,9 @@
   </div>
 
   <div class="table-container">
-    <div class="table-header">
-      <span>FI Station Diagonals</span>
-      <button id="diag-toggle" class="toggle-btn">👁</button>
-    </div>
+    <button id="diag-toggle" class="toggle-btn">👁</button>
     <div id="diag-block">
+      <div class="table-header">FI Station Diagonals</div>
       <table id="diag-table">
         <thead></thead>
         <tbody></tbody>
@@ -128,9 +132,8 @@
 
   <div id="modal">
     <div id="modal-content">
-      <button id="close-modal">CLOSE</button>
-      <button id="copy-btn">COPY ALL SN</button>
-      <div id="modal-body" style="margin-top:15px;"></div>
+      <button id="modal-close">Закрыть</button>
+      <div id="modal-body"></div>
     </div>
   </div>
 
@@ -138,7 +141,7 @@
     const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
     const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
     const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8';
-    
+
     let combinedDataCache = [];
     let currentLastDate = "";
 
@@ -149,20 +152,9 @@
     async function getData(sheetName, spreadsheetId = sheetId) {
       try {
         const res = await fetch(buildSheetURL(spreadsheetId, sheetName));
-        if (!res.ok) return [];
         const data = await res.json();
         return data.values || [];
       } catch (e) { return []; }
-    }
-
-    function parseDatePart(val) {
-      if (!val) return null;
-      const first = val.split(' ')[0].trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(first)) return new Date(first);
-      if (/^\d{2}\.\d{2}\.\d{4}$/.test(first)) {
-        const [d,m,y] = first.split('.'); return new Date(`${y}-${m}-${d}`);
-      }
-      return isNaN(Date.parse(first)) ? null : new Date(Date.parse(first));
     }
 
     function extractDiagonal(serial) {
@@ -175,8 +167,18 @@
       return sMap[s.slice(-3)] || null;
     }
 
+    function parseDatePart(val) {
+      if (!val) return null;
+      const first = val.split(' ')[0].trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(first)) return new Date(first);
+      if (/^\d{2}\.\d{2}\.\d{4}$/.test(first)) {
+        const [d,m,y] = first.split('.'); return new Date(`${y}-${m}-${d}`);
+      }
+      return isNaN(Date.parse(first)) ? null : new Date(Date.parse(first));
+    }
+
     async function updateStats() {
-      const [sK, sU, sA] = await Promise.all([
+      const [s1, s2, s3] = await Promise.all([
         getData('FI Station KOVALCHYK Y.'),
         getData('FI Station 2 ULANOVYCH.R'),
         getData('2024', sheetIdArchive)
@@ -184,11 +186,7 @@
 
       const mapRow = (r) => ({ date: r[0]||"", serial: r[2]||"", status: r[4]||"", name: r[5]||"", ocAfterRepair: r[9]||"", comment: r[10]||"" });
 
-      combinedDataCache = [
-        ...sK.slice(1).map(mapRow),
-        ...sU.slice(1).map(mapRow),
-        ...sA.slice(1).map(mapRow)
-      ];
+      combinedDataCache = [...s1.slice(1).map(mapRow), ...s2.slice(1).map(mapRow), ...s3.slice(1).map(mapRow)];
 
       const dates = combinedDataCache.map(r => parseDatePart(r.date)).filter(d => d);
       if (dates.length) {
@@ -197,14 +195,10 @@
       }
 
       const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === currentLastDate);
-      renderOverview(filtered);
-      renderDiagonals(filtered);
-    }
-
-    function renderOverview(filtered) {
+      
+      // Overview Render
       const stats = {};
       let tNDF=0, tOK=0, tWAIT=0, tTTL=0, tPNLA=0, gTotal=0;
-
       filtered.forEach(r => {
         const n = r.name || 'UNKNOWN';
         if (!stats[n]) stats[n] = { NDF:0, OK:0, WAITING:0, TTL:0, PNLA:0, total:0 };
@@ -216,17 +210,14 @@
         stats[n].total++; gTotal++;
       });
 
-      let html = Object.entries(stats).map(([name, s]) => `
+      document.querySelector('#combined-table tbody').innerHTML = Object.entries(stats).map(([name, s]) => `
         <tr>
-          <td onclick="openModal('${name}')" style="cursor:pointer; color:#0ff;">${name}</td>
+          <td onclick="openModal('${name}')">${name}</td>
           <td>${s.NDF}</td><td>${s.OK}</td><td>${s.WAITING}</td><td>${s.TTL}</td><td>${s.PNLA}</td><td class="sum-col">${s.total}</td>
-        </tr>`).join('');
-      
-      html += `<tr class="total-row"><td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td></tr>`;
-      document.querySelector('#combined-table tbody').innerHTML = html;
-    }
+        </tr>`).join('') + `
+        <tr class="total-row"><td>TOTAL</td><td>${tNDF}</td><td>${tOK}</td><td>${tWAIT}</td><td>${tTTL}</td><td>${tPNLA}</td><td class="sum-col">${gTotal}</td></tr>`;
 
-    function renderDiagonals(filtered) {
+      // Diagonals Render
       const diagStats = {};
       const allDiags = new Set();
       filtered.forEach(r => {
@@ -238,70 +229,67 @@
         allDiags.add(d);
       });
       const sorted = Array.from(allDiags).sort((a,b) => a-b);
-      const head = `<tr><th>NAME</th>${sorted.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUM</th></tr>`;
-      const body = Object.entries(diagStats).map(([name, ds]) => {
+      document.querySelector('#diag-table thead').innerHTML = `<tr><th>NAME</th>${sorted.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+      document.querySelector('#diag-table tbody').innerHTML = Object.entries(diagStats).map(([name, diags]) => {
         let sum = 0;
-        let cells = sorted.map(d => { const v = ds[d]||0; sum+=v; return `<td>${v}</td>`; }).join('');
+        let cells = sorted.map(d => { const v = diags[d]||0; sum+=v; return `<td>${v}</td>`; }).join('');
         return `<tr><td>${name}</td>${cells}<td class="sum-col">${sum}</td></tr>`;
       }).join('');
-      document.querySelector('#diag-table thead').innerHTML = head;
-      document.querySelector('#diag-table tbody').innerHTML = body;
     }
 
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ МОДАЛКИ
     function openModal(name) {
       const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === currentLastDate);
-      const body = document.getElementById('modal-body');
+      const modalBody = document.getElementById('modal-body');
       
       if (!records.length) {
-        body.innerHTML = "<p>Brak danych.</p>";
+        modalBody.innerHTML = "<p>Нет данных за текущий день</p>";
       } else {
-        let html = `<table>
-          <thead><tr><th>Data/Time</th><th>Serial Number</th><th>Status</th><th>OC After Repair</th><th>Comment</th></tr></thead>
-          <tbody>`;
+        let html = '<table><tr><th>Date/Time</th><th>Serial</th><th>Status</th><th>Verdict</th><th>Comment</th></tr>';
         records.forEach(r => {
-          html += `<tr>
-            <td>${r.date}</td>
-            <td class="copyable-sn">${r.serial}</td>
-            <td style="color:${r.status==='OK'?'#0f0':'#f0f'}">${r.status}</td>
-            <td>${r.ocAfterRepair || '--'}</td>
-            <td style="text-align:left;">${r.comment || '--'}</td>
-          </tr>`;
+          html += `<tr><td>${r.date}</td><td>${r.serial}</td><td>${r.status}</td><td>${r.ocAfterRepair}</td><td>${r.comment}</td></tr>`;
         });
-        html += `</tbody></table>`;
-        body.innerHTML = html;
+        modalBody.innerHTML = html + '</table>';
       }
       document.getElementById('modal').classList.add('show');
     }
+
+    // Закрытие модалки по кнопке
+    document.getElementById('modal-close').onclick = () => document.getElementById('modal').classList.remove('show');
+    
+    // ЗАКРЫТИЕ ПО КЛИКУ МИМО ОКНА (НА ОВЕРЛЕЙ)
+    window.onclick = (e) => {
+      if (e.target === document.getElementById('modal')) {
+        document.getElementById('modal').classList.remove('show');
+      }
+    };
 
     // Поиск
     document.getElementById('search').onkeypress = async e => {
       if (e.key === 'Enter') {
         const val = e.target.value.trim();
-        const out = document.getElementById('search-result');
-        out.innerHTML = "Szukam...";
+        const output = document.getElementById('search-result');
+        output.innerHTML = "Szukam...";
         const matches = combinedDataCache.filter(r => (r.serial || '').includes(val))
                         .sort((a,b) => (parseDatePart(b.date)||0) - (parseDatePart(a.date)||0));
         if (matches.length) {
-          out.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>Worker</th><th>Final</th><th>Info</th></tr></thead>
-            <tbody>${matches.map((m, i) => `<tr class="${i===0?'blink-row':''}"><td>${m.date}</td><td>${m.status}</td><td>${m.name}</td><td>${m.ocAfterRepair}</td><td>${m.comment}</td></tr>`).join('')}</tbody></table>`;
-        } else { out.innerHTML = "Brak wyników."; }
+          output.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>Worker</th><th>Final</th><th>Info</th></tr></thead>
+            <tbody>${matches.map(m => `<tr><td>${m.date}</td><td>${m.status}</td><td>${m.name}</td><td>${m.ocAfterRepair}</td><td>${m.comment}</td></tr>`).join('')}</tbody></table>`;
+        } else { output.innerHTML = "Brak info!"; }
       }
     };
 
-    document.getElementById('close-modal').onclick = () => document.getElementById('modal').classList.remove('show');
-    document.getElementById('copy-btn').onclick = () => {
-      const sns = Array.from(document.querySelectorAll('.copyable-sn')).map(td => td.innerText).join('\n');
-      navigator.clipboard.writeText(sns).then(() => alert('Copied ' + sns.split('\n').length + ' SNs'));
+    // Переключатели
+    document.getElementById('overview-toggle').onclick = () => {
+      const b = document.getElementById('overview-block'); b.style.display = b.style.display==='none'?'block':'none';
     };
-
-    document.getElementById('overview-toggle').onclick = () => { const b = document.getElementById('overview-block'); b.style.display = b.style.display==='none'?'block':'none'; };
-    document.getElementById('diag-toggle').onclick = () => { const b = document.getElementById('diag-block'); b.style.display = b.style.display==='none'?'block':'none'; };
+    document.getElementById('diag-toggle').onclick = () => {
+      const b = document.getElementById('diag-block'); b.style.display = b.style.display==='none'?'block':'none';
+    };
 
     updateStats();
     setInterval(updateStats, 25000);
 
-    // ВСЕ ТВОИ ФОНЫ
+    // ВСЕ ТВОИ ФОНЫ (39 ШТ)
     const backgrounds = [
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
@@ -342,12 +330,12 @@
       "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/rzeka-w-mglisty-krajobraz-gor.jpg"
     ];
 
-    let bgIdx = 0;
+    let bgIndex = 0;
     setInterval(() => {
-      bgIdx = (bgIdx + 1) % backgrounds.length;
-      document.body.style.background = `url('${backgrounds[bgIdx]}') no-repeat center center fixed`;
+      bgIndex = (bgIndex + 1) % backgrounds.length;
+      document.body.style.background = `url('${backgrounds[bgIndex]}') no-repeat center center fixed`;
       document.body.style.backgroundSize = "cover";
-    }, 180000); // 3 минуты
+    }, 180000);
   </script>
 </body>
 </html>
