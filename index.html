@@ -129,6 +129,7 @@ border:2px solid #0ff;
 background-color:#333;
 }
 
+/* Анимация мигания для последней записи в поиске */
 @keyframes blink-active {
   0% { background-color: rgba(0, 128, 128, 0.3); }
   50% { background-color: rgba(0, 255, 255, 0.6); }
@@ -141,6 +142,7 @@ background-color:#333;
   font-weight: bold;
 }
 
+/* Модалка */
 #modal {
 display:none;
 position:fixed;
@@ -194,6 +196,7 @@ border-radius: 4px;
 margin-left: 10px;
 }
 
+/* Секретная кнопка Юры */
 #secret-btn-kovalchyk {
 cursor: pointer;
 opacity: 0.1;
@@ -280,7 +283,7 @@ const apiKey = 'AIzaSyCP7tzYiGwIZ6cymLAlv_9QgPIEshnRgqI';
 const sheetId = '10W03bvKlVFlIUcxsHkzP_v_13gtnYRBmnrrO0ujB1bU';
 const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8';
 
-let combinedDataCache = []; // Основной буфер
+let combinedDataCache = []; // Основной буфер данных
 
 function buildSheetURL(spreadsheetId, sheetName) {
 return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
@@ -293,8 +296,8 @@ if (!res.ok) throw new Error(res.statusText);
 const data = await res.json();
 return data.values || [];
 } catch (e) {
-console.error(`Error fetching ${sheetName}:`, e);
-return null; // Возвращаем null при ошибке для обработки в Promise.all
+console.error(`Fetch error ${sheetName}:`, e);
+return null; // Возвращаем null для корректной работы Promise.all
 }
 }
 
@@ -310,35 +313,39 @@ const last3 = s.slice(-3);
 return diagonalMapSuffix[last3] || null;
 }
 
-// РЕАЛИЗАЦИЯ ДВОЙНОЙ БУФЕРИЗАЦИИ
+// ФУНКЦИЯ ЗАГРУЗКИ С ДВОЙНОЙ БУФЕРИЗАЦИЕЙ
 async function fetchAndCacheData() {
     try {
-        // Загружаем данные параллельно (быстрее)
         const [s1, s2, s3] = await Promise.all([
             getData('FI Station KOVALCHYK Y.', sheetId),
             getData('FI Station 2 ULANOVYCH.R', sheetId),
             getData('2024', sheetIdArchive)
         ]);
 
-        // Если критические данные не загрузились, не обновляем кеш
+        // Если основные листы не загрузились, прерываемся и сохраняем старый кеш
         if (!s1 && !s2) return false;
 
         const mapR = (r, insp) => ({
-            date: r[0] || "", serial: r[2] || "", status: r[4] || "",
-            name: r[5] || "", nameG: r[6] || "", ocAfterRepair: r[9] || "", 
-            comment: r[10] || "", inspector: insp
+            date: r[0] || "", 
+            serial: r[2] || "", 
+            type: (r[3] || "").trim().toUpperCase(), // СТОЛБЕЦ D (MNT)
+            status: r[4] || "",
+            name: r[5] || "", 
+            nameG: r[6] || "", 
+            ocAfterRepair: r[9] || "", 
+            comment: r[10] || "", 
+            inspector: insp
         });
 
-        // Создаем временный массив (Теневой буфер)
+        // Формируем временный теневой буфер
         const shadowBuffer = [
             ...(s1 ? s1.slice(1) : []).map(r => mapR(r, 'KOVALCHYK Y.')),
             ...(s2 ? s2.slice(1) : []).map(r => mapR(r, 'ULANOVYCH.R')),
             ...(s3 ? s3.slice(1) : []).map(r => mapR(r, 'ARCHIVE'))
         ];
 
-        // Только если получили данные, обновляем основной кеш
         if (shadowBuffer.length > 0) {
-            combinedDataCache = shadowBuffer;
+            combinedDataCache = shadowBuffer; // Обновляем основной кеш только здесь
             return true;
         }
         return false;
@@ -373,6 +380,7 @@ const modalClose = document.getElementById('modal-close');
 if(modalClose) modalClose.onclick = () => modal.classList.remove('show');
 if(modal) modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
 
+// Секретная кнопка Юры с фильтром по столбцу D (MNT)
 const secretBtn = document.getElementById('secret-btn-kovalchyk');
 if(secretBtn) {
     secretBtn.onclick = () => {
@@ -380,15 +388,18 @@ if(secretBtn) {
         copyBtn.style.display = "inline-block";
         const dInfoText = document.getElementById('date-info').textContent;
         const lastDateStr = dInfoText.includes(':') ? dInfoText.split(':')[1].trim() : "";
+        
+        // Фильтруем: только Юра, только сегодня, статус OK/NDF и НЕ МОНИТОР
         const records = combinedDataCache.filter(r => 
             r.inspector === 'KOVALCHYK Y.' && 
             (r.date || '').split(' ')[0] === lastDateStr &&
-            (r.status === 'OK' || r.status === 'NDF')
+            (r.status === 'OK' || r.status === 'NDF') &&
+            r.type !== 'MNT'
         );
 
-        let html = `<h4 style="margin:0 0 10px 0; color:#008080;">Kovalchyk Y. (Daily SN List)</h4>`;
+        let html = `<h4 style="margin:0 0 10px 0; color:#008080;">Kovalchyk Y. (Daily SN List - No Monitors)</h4>`;
         if (!records.length) {
-            html += "<p>Brak danych za сегодня.</p>";
+            html += "<p>Brak danych za сегодня (или только мониторы).</p>";
             copyBtn.style.display = "none";
         } else {
             records.forEach(r => { html += `<div class="sn-list-item">${r.serial || '--'}</div>`; });
@@ -417,9 +428,9 @@ function openModal(name) {
     if (!records.length) {
         modalBody.innerHTML = "<p>Brak danych za сегодня.</p>";
     } else {
-        let html = '<table><tr><th>Serial</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
+        let html = '<table><tr><th>Serial</th><th>Type</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
         records.forEach(r => {
-            html += `<tr><td>${r.serial || '--'}</td><td>${r.status || '--'}</td><td>${r.ocAfterRepair || '--'}</td><td>${r.comment || '--'}</td></tr>`;
+            html += `<tr><td>${r.serial || '--'}</td><td>${r.type || '--'}</td><td>${r.status || '--'}</td><td>${r.ocAfterRepair || '--'}</td><td>${r.comment || '--'}</td></tr>`;
         });
         html += '</table>';
         modalBody.innerHTML = html;
@@ -495,41 +506,38 @@ if(searchInput) {
             const serial = e.target.value.trim();
             const output = document.getElementById('search-result');
             if (!serial || !output) return;
-            output.innerHTML = "<p style='color:lightblue'>Szukam в буфере...</p>";
-            
-            const matches = combinedDataCache.filter(r => (r.serial || '').trim() === serial);
-            if (matches.length) {
-                matches.sort((a, b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
-                let rowsHtml = matches.map((d, idx) => {
-                    const isLatest = idx === 0 ? 'class="latest-record"' : '';
-                    return `<tr ${isLatest}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`;
-                }).join('');
-                output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;">Znaleziono: ${matches.length}</div>
-                <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
-                <tbody>${rowsHtml}</tbody></table>`;
-            } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
+            output.innerHTML = "<p style='color:lightblue'>Szukam...</p>";
+            try {
+                const matches = combinedDataCache.filter(r => (r.serial || '').trim() === serial);
+                if (matches.length) {
+                    matches.sort((a, b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
+                    let rowsHtml = matches.map((d, idx) => {
+                        const isLatest = idx === 0 ? 'class="latest-record"' : '';
+                        return `<tr ${isLatest}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`;
+                    }).join('');
+                    output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;">Znaleziono: ${matches.length}</div>
+                    <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
+                    <tbody>${rowsHtml}</tbody></table>`;
+                } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
+            } catch (err) { output.innerHTML = "<p style='color:red'>Błąd поиска!</p>"; }
         }
     });
 }
 
-// ОСНОВНОЙ ЦИКЛ ОБНОВЛЕНИЯ (БЕЗОПАСНЫЙ)
 async function updateStats() {
-    // 1. Пытаемся обновить буфер в фоне
+    // Ждем загрузку в буфер
     const success = await fetchAndCacheData();
     
-    // 2. Если данных в буфере всё ещё нет (даже старых), ничего не рисуем
+    // Если загрузка провалилась и буфер пуст (первый запуск), ничего не делаем.
+    // Если буфер уже был наполнен ранее, используем старые данные (таблицы не исчезнут).
     if (combinedDataCache.length === 0) return;
 
-    // 3. Вычисляем дату и фильтруем (используем кеш, который точно не пустой)
     const lastDate = getLastDate(combinedDataCache);
     let lastDateStr = lastDate ? lastDate.toISOString().split('T')[0] : "";
-    
     const dInfo = document.getElementById('date-info');
     if(dInfo) dInfo.textContent = `DATE: ${lastDateStr || '--'}`;
     
     const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === lastDateStr);
-    
-    // 4. Отрисовка (происходит мгновенно, так как данные уже в памяти)
     displayCombinedStats(filtered);
     displayDiagonalStats(filtered);
 }
@@ -547,7 +555,7 @@ if(diBtn && diBlock) {
 }
 
 updateStats();
-setInterval(updateStats, 60000); // Обновление раз в минуту
+setInterval(updateStats, 60000);
 
 const backgrounds = [
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
