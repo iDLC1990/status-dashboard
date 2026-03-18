@@ -277,7 +277,7 @@ font-size: 16px;
 </div>
 
 <div class="table-container">
-<button id="overview-toggle" class="toggle-btn">          </button>
+<button id="overview-toggle" class="toggle-btn"> . </button>
 <div id="overview-block">
 <div class="table-header">
     <span>FI Station Overview</span>
@@ -486,7 +486,7 @@ if(bulkSearchBtn) {
                     matches.sort((a,b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
                     results.push(matches[0]);
                 } else {
-                    results.push({ serial: sn, date: '---', status: 'NOT FOUND', name: '---', comment: 'Brak danych' });
+                    results.push({ serial: sn, date: '---', status: 'NOT FOUND', name: '---', comment: 'Brak данных' });
                 }
             });
 
@@ -632,6 +632,20 @@ const diBlock = document.getElementById('diag-block');
 if(diBtn && diBlock) {
     diBtn.onclick = () => diBlock.style.display = (diBlock.style.display === 'none') ? 'block' : 'none';
 }
+
+// ГОРЯЧИЕ КЛАВИШИ (ALT+1 и ALT+2)
+window.addEventListener('keydown', (e) => {
+    if (e.altKey) {
+        if (e.key === '1') {
+            e.preventDefault();
+            if (ovBtn) ovBtn.click();
+        }
+        if (e.key === '2') {
+            e.preventDefault();
+            if (diBtn) diBtn.click();
+        }
+    }
+});
 
 updateStats();
 setInterval(updateStats, 60000);
