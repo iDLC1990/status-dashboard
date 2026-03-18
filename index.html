@@ -196,7 +196,7 @@ border-radius: 4px;
 margin-left: 10px;
 }
 
-/* Секретные кнопки */
+
 .header-actions {
     display: flex;
     align-items: center;
@@ -234,7 +234,7 @@ font-family: monospace;
 font-size: 16px;
 }
 
-/* Стили для массового поиска */
+
 #bulk-input {
     width: 100%;
     height: 120px;
@@ -277,7 +277,7 @@ font-size: 16px;
 </div>
 
 <div class="table-container">
-<button id="overview-toggle" class="toggle-btn">👁</button>
+<button id="overview-toggle" class="toggle-btn"> . </button>
 <div id="overview-block">
 <div class="table-header">
     <span>FI Station Overview</span>
@@ -316,7 +316,6 @@ font-size: 16px;
 
 <div id="modal">
 <div id="modal-content">
-<button id="modal-close">Закрыть</button>
 <button id="copy-btn">Copy SN</button>
 <div id="modal-body"></div>
 </div>
@@ -421,7 +420,7 @@ const modalClose = document.getElementById('modal-close');
 if(modalClose) modalClose.onclick = () => modal.classList.remove('show');
 if(modal) modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
 
-// Секретная кнопка Юры
+// кнопка Юры
 const secretBtn = document.getElementById('secret-btn-kovalchyk');
 if(secretBtn) {
     secretBtn.onclick = () => {
@@ -458,7 +457,7 @@ if(secretBtn) {
     };
 }
 
-// (логика залупа)
+//(логиув залупа)
 const bulkSearchBtn = document.getElementById('bulk-search-btn');
 if(bulkSearchBtn) {
     bulkSearchBtn.onclick = () => {
@@ -483,7 +482,7 @@ if(bulkSearchBtn) {
             snList.forEach(sn => {
                 const matches = combinedDataCache.filter(r => (r.serial || '').trim() === sn);
                 if(matches.length) {
-                  
+                    
                     matches.sort((a,b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
                     results.push(matches[0]);
                 } else {
