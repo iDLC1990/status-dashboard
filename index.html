@@ -598,7 +598,7 @@ if(searchInput) {
                         const isLatest = idx === 0 ? 'class="latest-record"' : '';
                         return `<tr ${isLatest}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`;
                     }).join('');
-                    output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;">Znaleziono: ${matches.length}</div>
+                    output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;"> ${matches.length}</div>
                     <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
                     <tbody>${rowsHtml}</tbody></table>`;
                 } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
