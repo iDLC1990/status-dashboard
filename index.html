@@ -573,7 +573,7 @@ updateStats();
 setInterval(updateStats, 60000);
 
 const backgrounds = [
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
     "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
     "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
     "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-1526713.jpg",
@@ -609,6 +609,7 @@ const backgrounds = [
     "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
     "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
     "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg"
+    ];
 let bgIndex = 0;
 setInterval(() => {
     bgIndex = (bgIndex + 1) % backgrounds.length;
@@ -616,7 +617,7 @@ setInterval(() => {
     document.body.style.backgroundSize = "cover";
 }, 180000);
 
-// ГОРЯЧИЕ КЛАВИШИ (ГЛОБАЛЬНЫЙ ОБРАБОТЧИК)
+ 
 document.addEventListener('keydown', (e) => {
     const activeElem = document.activeElement;
     const isTyping = (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA');
