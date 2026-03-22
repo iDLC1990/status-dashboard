@@ -271,7 +271,7 @@ text-shadow: 0 0 8px #0ff;
 </div>
 
 <div class="table-container">
-<input type="text" id="search" placeholder="Podaj SN / pn czesci (Enter)">
+<input type="text" id="search" placeholder="Wklej SN   и Enter">
 <div id="search-result"></div>
 </div>
 
@@ -449,44 +449,31 @@ if(bulkSearchBtn) {
         modal.classList.add('show');
 
         document.getElementById('run-bulk-search').onclick = () => {
-            const snList = document.getElementById('bulk-input').value.split('\n').map(s => s.trim()).filter(s => s !== "");
-            if(!snList.length) return;
-
-            const foundMatches = [];
-            const notFound = [];
-
-            snList.forEach(sn => {
-                const matches = combinedDataCache.filter(r => (r.serial || '').trim() === sn);
-                if(matches.length) {
-                    matches.sort((a,b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
-                    foundMatches.push(matches[0]);
-                } else {
-                    notFound.push({ serial: sn, date: '---', status: ' ', name: '---', comment: '' });
-                }
-            });
-
-            const workerCounts = {};
-            foundMatches.forEach(m => {
-                const wName = m.name || 'UNKNOWN';
-                workerCounts[wName] = (workerCounts[wName] || 0) + 1;
-            });
-
-            foundMatches.sort((a, b) => {
-                const countA = workerCounts[a.name || 'UNKNOWN'];
-                const countB = workerCounts[b.name || 'UNKNOWN'];
-                return countB !== countA ? countB - countA : (a.name || '').localeCompare(b.name || '');
-            });
-
-            let resHtml = `<table><tr><th>Serial</th><th>Data</th><th>Status</th><th>Naprawiacz</th><th>Info</th></tr>`;
-            [...foundMatches, ...notFound].forEach(r => {
-                const style = r.status === 'NOT FOUND' ? 'style="color:#ff5555"' : '';
-                resHtml += `<tr ${style}>
-                    <td>${r.serial}</td><td>${r.date}</td><td>${r.status}</td><td>${r.name}</td><td>${r.comment}</td>
-                </tr>`;
-            });
-            document.getElementById('bulk-result').innerHTML = resHtml + `</table>`;
+            const snList = document.getElementById('bulk-input').value.split(/[\n\s,]+/).map(s => s.trim()).filter(s => s !== "");
+            runSearchLogic(snList, document.getElementById('bulk-result'));
         };
     };
+}
+
+function runSearchLogic(snList, outputElement) {
+    const foundMatches = [];
+    snList.forEach(sn => {
+        const matches = combinedDataCache.filter(r => (r.serial || '').trim() === sn);
+        if(matches.length) {
+            matches.sort((a,b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
+            foundMatches.push(...matches); 
+        }
+    });
+
+    if (foundMatches.length) {
+        outputElement.innerHTML = `<table><thead><tr><th>Serial</th><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>INFO</th></tr></thead>
+        <tbody>${foundMatches.map((d, i) => {
+            const isFirstOfGroup = i === 0 || d.serial !== foundMatches[i-1].serial;
+            return `<tr ${isFirstOfGroup ? 'class="latest-record"' : ''}><td>${d.serial}</td><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.comment}</td></tr>`
+        }).join('')}</tbody></table>`;
+    } else {
+        outputElement.innerHTML = "<p style='color:yellow'>Brak info!</p>";
+    }
 }
 
 function openModal(name) {
@@ -495,7 +482,7 @@ function openModal(name) {
     const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
 
     if (!records.length) {
-        modalBody.innerHTML = "<p>Brak данных</p>";
+        modalBody.innerHTML = "<p>Brak danych</p>";
     } else {
         let html = '<table><tr><th>Serial</th><th>Type</th><th>Status</th><th>OC</th><th>COMMENT</th></tr>';
         records.forEach(r => {
@@ -552,15 +539,13 @@ function displayDiagonalStats(filtered) {
     });
 }
 
+ 
 document.getElementById('search').onkeypress = async e => {
     if (e.key === 'Enter') {
-        const serial = e.target.value.trim();
+        const inputVal = e.target.value.trim();
+        const snList = inputVal.split(/[\s,]+/).filter(s => s !== "");
         const output = document.getElementById('search-result');
-        const matches = combinedDataCache.filter(r => (r.serial || '').trim() === serial).sort((a,b) => (parseDatePart(b.date)||0) - (parseDatePart(a.date)||0));
-        if (matches.length) {
-            output.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
-            <tbody>${matches.map((d, i) => `<tr ${i===0?'class="latest-record"':''}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`).join('')}</tbody></table>`;
-        } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
+        runSearchLogic(snList, output);
     }
 };
 
@@ -589,42 +574,41 @@ setInterval(updateStats, 60000);
 
 const backgrounds = [
 "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-carlos-oliva-1966452-3586966.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-1526713.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-gochrisgoxyz-1643409.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-iriser-1366957.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joshkjack-135018.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-326055.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rickyrecap-2627063.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rpnickson-2478248.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sanaan-3075993.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-simon73-1183099.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pengwhan-1767434.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harry-shum-17627821-15984177.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-am83-12709111.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-njeromin-12766489.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-533923.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-robshumski-1903702.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-elti-meshau-107925-333850.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harun-tan-2311991-3980364.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joyston-judah-331625-933054.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-464336.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-35857.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jahoo-388415.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-therato-1933320.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2166711.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thanhhoa-tran-640546-1462892.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jplenio-3131634.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2563129.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-david-bartus-43782-2379653.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-dreamypixel-547114.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sebastiaan9977-1097456.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-souvenirpixels-1519088.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
-"https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg"
-];
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-1367192.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-eberhardgross-640781.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-1526713.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-gochrisgoxyz-1643409.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-iriser-1366957.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joshkjack-135018.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-326055.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rickyrecap-2627063.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-rpnickson-2478248.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sanaan-3075993.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-simon73-1183099.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pengwhan-1767434.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harry-shum-17627821-15984177.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-am83-12709111.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-njeromin-12766489.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-533923.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-robshumski-1903702.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-elti-meshau-107925-333850.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-harun-tan-2311991-3980364.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-joyston-judah-331625-933054.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-francesco-ungaro-464336.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-pixabay-35857.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jahoo-388415.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-therato-1933320.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2166711.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thanhhoa-tran-640546-1462892.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-jplenio-3131634.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-quang-nguyen-vinh-222549-2563129.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-david-bartus-43782-2379653.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-dreamypixel-547114.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-sebastiaan9977-1097456.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-souvenirpixels-1519088.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-stywo-1261731.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563355.jpg",
+    "https://raw.githubusercontent.com/iDLC1990/status-dashboard/main/pexels-thatguycraig000-1563356.jpg"
 let bgIndex = 0;
 setInterval(() => {
     bgIndex = (bgIndex + 1) % backgrounds.length;
@@ -632,23 +616,18 @@ setInterval(() => {
     document.body.style.backgroundSize = "cover";
 }, 180000);
 
-// ГОРЯЧИЕ КЛАВИШИ (НАДЕЖНАЯ ВЕРСИЯ)
-window.addEventListener('keydown', (e) => {
-    // Если фокус в любом поле ввода, горячие клавиши не должны мешать печатать
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        if (e.key === 'Escape') modal.classList.remove('show');
-        return;
-    }
+// ГОРЯЧИЕ КЛАВИШИ (ГЛОБАЛЬНЫЙ ОБРАБОТЧИК)
+document.addEventListener('keydown', (e) => {
+    const activeElem = document.activeElement;
+    const isTyping = (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA');
 
     if (e.altKey) {
-        // Alt + 1
         if (e.code === 'Digit1' || e.key === '1') {
             e.preventDefault();
             const b = document.getElementById('overview-block');
             const isHidden = window.getComputedStyle(b).display === 'none';
             b.style.display = isHidden ? 'block' : 'none';
         }
-        // Alt + 2
         if (e.code === 'Digit2' || e.key === '2') {
             e.preventDefault();
             const b = document.getElementById('diag-block');
@@ -660,7 +639,7 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         modal.classList.remove('show');
     }
-}, true); // Приоритетный захват событий
+}, true);
 
 
 if ('serviceWorker' in navigator) {
