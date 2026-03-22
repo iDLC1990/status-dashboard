@@ -183,20 +183,6 @@ margin-bottom:10px;
 border-radius: 4px;
 }
 
-#copy-btn {
-background: #0ff;
-color: #000;
-border: none;
-padding: 5px 15px;
-cursor: pointer;
-font-weight: bold;
-margin-bottom: 10px;
-display: none;
-border-radius: 4px;
-margin-left: 10px;
-}
-
-
 .header-actions {
     display: flex;
     align-items: center;
@@ -228,14 +214,6 @@ color: #0ff;
 opacity: 1;
 text-shadow: 0 0 5px #0ff;
 }
-
-.sn-list-item {
-padding: 5px;
-border-bottom: 1px dashed #444;
-font-family: monospace;
-font-size: 16px;
-}
-
 
 #bulk-input {
     width: 100%;
@@ -319,7 +297,6 @@ font-size: 16px;
 <div id="modal">
 <div id="modal-content">
 <button id="modal-close">Close</button>
-<button id="copy-btn">Copy SN</button>
 <div id="modal-body"></div>
 </div>
 </div>
@@ -331,32 +308,32 @@ const sheetIdArchive = '1UWu4bcuHg6NHhK8ZvjDlQAIue6R1FLBlmAlBhHBj-D8';
 
 let combinedDataCache = []; 
 
-function buildSheetURL(spreadsheetId, sheetName) {
-return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
-}
-
-async function getData(sheetName, spreadsheetId = sheetId) {
-try {
-const res = await fetch(buildSheetURL(spreadsheetId, sheetName));
-if (!res.ok) throw new Error(res.statusText);
-const data = await res.json();
-return data.values || [];
-} catch (e) {
-console.error(`Fetch error ${sheetName}:`, e);
-return null; 
-}
-}
-
 const diagonalMapPrefix = {'WH8':55,'WC8':32,'WU0':43,'SQ1':43,'WM5':50,'WC7':32,'WP5':65,'WW1':75,'WM6':50};
 const diagonalMapSuffix = {'860':86,'850':85,'750':75,'700':70,'650':65,'580':58,'575':58,'550':55,'545':55,'500':50,'498':50,'495':50,'490':50,'438':43,'435':43,'430':43,'428':43,'425':43,'420':43,'418':43,'415':43,'398':43,'395':43,'390':43,'348':32,'345':32,'340':32,'328':32,'325':32,'320':32,'318':32,'315':32,'278':27,'275':27,'270':27,'248':24,'245':24,'240':24,'238':24,'235':24,'230':24};
 
+// Оптимизированная функция диагоналей
 function extractDiagonal(serial) {
-if (!serial) return null;
-const s = serial.trim();
-if (s.length >= 3 && diagonalMapPrefix[s.substr(0,3)]) return diagonalMapPrefix[s.substr(0,3)];
-if (s.length >= 6 && diagonalMapSuffix[s.substr(3,3)]) return diagonalMapSuffix[s.substr(3,3)];
-const last3 = s.slice(-3);
-return diagonalMapSuffix[last3] || null;
+    if (!serial) return null;
+    const s = serial.trim();
+    return diagonalMapPrefix[s.substring(0, 3)] || 
+           diagonalMapSuffix[s.substring(3, 6)] || 
+           diagonalMapSuffix[s.slice(-3)] || null;
+}
+
+function buildSheetURL(spreadsheetId, sheetName) {
+    return `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
+}
+
+async function getData(sheetName, spreadsheetId = sheetId) {
+    try {
+        const res = await fetch(buildSheetURL(spreadsheetId, sheetName));
+        if (!res.ok) throw new Error(res.statusText);
+        const data = await res.json();
+        return data.values || [];
+    } catch (e) {
+        console.error(`Fetch error ${sheetName}:`, e);
+        return null; 
+    }
 }
 
 async function fetchAndCacheData() {
@@ -381,17 +358,12 @@ async function fetchAndCacheData() {
             inspector: insp
         });
 
-        const shadowBuffer = [
+        combinedDataCache = [
             ...(s1 ? s1.slice(1) : []).map(r => mapR(r, 'KOVALCHYK Y.')),
             ...(s2 ? s2.slice(1) : []).map(r => mapR(r, 'ULANOVYCH.R')),
             ...(s3 ? s3.slice(1) : []).map(r => mapR(r, 'ARCHIVE'))
         ];
-
-        if (shadowBuffer.length > 0) {
-            combinedDataCache = shadowBuffer; 
-            return true;
-        }
-        return false;
+        return true;
     } catch (e) {
         console.error("Buffer update failed:", e);
         return false;
@@ -399,31 +371,30 @@ async function fetchAndCacheData() {
 }
 
 function parseDatePart(val) {
-if (!val) return null;
-const first = val.split(' ')[0].trim();
-if (/^\d{4}-\d{2}-\d{2}$/.test(first)) return new Date(first);
-if (/^\d{2}\.\d{2}\.\d{4}$/.test(first)) {
-const [d,m,y] = first.split('.');
-return new Date(`${y}-${m}-${d}`);
-}
-const parsed = Date.parse(first);
-return isNaN(parsed) ? null : new Date(parsed);
+    if (!val) return null;
+    const first = val.split(' ')[0].trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(first)) return new Date(first);
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(first)) {
+        const [d,m,y] = first.split('.');
+        return new Date(`${y}-${m}-${d}`);
+    }
+    const parsed = Date.parse(first);
+    return isNaN(parsed) ? null : new Date(parsed);
 }
 
 function getLastDate(data) {
-const dates = data.map(r => parseDatePart(r.date)).filter(d => d instanceof Date && !isNaN(d));
-return dates.length ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
+    const dates = data.map(r => parseDatePart(r.date)).filter(d => d instanceof Date && !isNaN(d));
+    return dates.length ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
 }
 
 const modal = document.getElementById('modal');
 const modalBody = document.getElementById('modal-body');
-const copyBtn = document.getElementById('copy-btn');
 const modalClose = document.getElementById('modal-close');
 
 if(modalClose) modalClose.onclick = () => modal.classList.remove('show');
 if(modal) modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
 
-// 1. ПЕРЕДЕЛАННАЯ КНОПКА ЮРЫ (Прямое копирование)
+// ПРАВКА: Кнопка Юры (мгновенное копирование без окна)
 const secretBtn = document.getElementById('secret-btn-kovalchyk');
 if(secretBtn) {
     secretBtn.onclick = () => {
@@ -433,34 +404,28 @@ if(secretBtn) {
         const records = combinedDataCache.filter(r => 
             r.inspector === 'KOVALCHYK Y.' && 
             (r.date || '').split(' ')[0] === lastDateStr &&
-            (r.status === 'OK' || r.status === 'NDF'|| r.status === 'SCRAP TTL') &&
+            ['OK','NDF','SCRAP TTL'].includes(r.status) &&
             r.type !== 'MNT'
         );
 
-        if (!records.length) {
-            console.log("No records for Yura today.");
-            return;
-        }
+        if (!records.length) return;
 
         const textToCopy = records.map(r => r.serial).join('\n');
         navigator.clipboard.writeText(textToCopy).then(() => {
             const oldSymbol = secretBtn.textContent;
-            secretBtn.textContent = "✓"; // Визуальное подтверждение
-            setTimeout(() => secretBtn.textContent = oldSymbol, 1500);
+            secretBtn.textContent = "✓";
+            setTimeout(() => secretBtn.textContent = oldSymbol, 1200);
         });
     };
 }
 
-// 2. ИЗМЕНЕННАЯ ЛОГИКА ПОИСКА (Сортировка по количеству совпадений у работника)
+// ПРАВКА: Групповой поиск с сортировкой по лидеру
 const bulkSearchBtn = document.getElementById('bulk-search-btn');
 if(bulkSearchBtn) {
     bulkSearchBtn.onclick = () => {
         if(!modalBody || !modal) return;
-        if(copyBtn) copyBtn.style.display = "none";
-
         modalBody.innerHTML = `
             <h3 style="color:#0ff; margin-top:0;">Bulk Search</h3>
-            <p style="font-size:14px; color:#aaa;">Wklej listę SN (jeden w linii):</p>
             <textarea id="bulk-input" placeholder="SN1\nSN2..."></textarea>
             <button id="run-bulk-search">SZUKAJ</button>
             <div id="bulk-result" style="margin-top:20px;"></div>
@@ -468,8 +433,7 @@ if(bulkSearchBtn) {
         modal.classList.add('show');
 
         document.getElementById('run-bulk-search').onclick = () => {
-            const text = document.getElementById('bulk-input').value;
-            const snList = text.split('\n').map(s => s.trim()).filter(s => s !== "");
+            const snList = document.getElementById('bulk-input').value.split('\n').map(s => s.trim()).filter(s => s !== "");
             if(!snList.length) return;
 
             const foundMatches = [];
@@ -479,53 +443,37 @@ if(bulkSearchBtn) {
                 const matches = combinedDataCache.filter(r => (r.serial || '').trim() === sn);
                 if(matches.length) {
                     matches.sort((a,b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
-                    foundMatches.push(matches[0]); // Берем самую свежую запись
+                    foundMatches.push(matches[0]);
                 } else {
                     notFound.push({ serial: sn, date: '---', status: 'NOT FOUND', name: '---', comment: '' });
                 }
             });
 
-            // Считаем количество совпадений для каждого работника
             const workerCounts = {};
             foundMatches.forEach(m => {
                 const wName = m.name || 'UNKNOWN';
                 workerCounts[wName] = (workerCounts[wName] || 0) + 1;
             });
 
-            // Сортируем найденные результаты: сначала по популярности работника, потом по имени
             foundMatches.sort((a, b) => {
                 const countA = workerCounts[a.name || 'UNKNOWN'];
                 const countB = workerCounts[b.name || 'UNKNOWN'];
-                if (countB !== countA) return countB - countA; 
-                return (a.name || '').localeCompare(b.name || '');
+                return countB !== countA ? countB - countA : (a.name || '').localeCompare(b.name || '');
             });
 
-            // Соединяем найденные и ненайденные (ненайденные в конце)
-            const finalResults = [...foundMatches, ...notFound];
-
-            let resHtml = `<table><tr><th>Serial</th><th>Data</th><th>Status</th><th>Naprawiacz (Matches)</th><th>Info</th></tr>`;
-            finalResults.forEach(r => {
-                const isNotFound = r.status === 'NOT FOUND';
-                const style = isNotFound ? 'style="color:#ff5555"' : '';
-                const countLabel = !isNotFound ? ` (${workerCounts[r.name || 'UNKNOWN']})` : '';
-                
+            let resHtml = `<table><tr><th>Serial</th><th>Data</th><th>Status</th><th>Naprawiacz</th><th>Info</th></tr>`;
+            [...foundMatches, ...notFound].forEach(r => {
+                const style = r.status === 'NOT FOUND' ? 'style="color:#ff5555"' : '';
                 resHtml += `<tr ${style}>
-                    <td>${r.serial}</td>
-                    <td>${r.date}</td>
-                    <td>${r.status}</td>
-                    <td>${r.name}${countLabel}</td>
-                    <td>${r.comment}</td>
+                    <td>${r.serial}</td><td>${r.date}</td><td>${r.status}</td><td>${r.name}</td><td>${r.comment}</td>
                 </tr>`;
             });
-            resHtml += `</table>`;
-            document.getElementById('bulk-result').innerHTML = resHtml;
+            document.getElementById('bulk-result').innerHTML = resHtml + `</table>`;
         };
     };
 }
 
 function openModal(name) {
-    if(!copyBtn || !modalBody || !modal) return;
-    copyBtn.style.display = "none";
     const dInfoText = document.getElementById('date-info').textContent;
     const lastDateStr = dInfoText.includes(':') ? dInfoText.split(':')[1].trim() : "";
     const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
@@ -533,12 +481,11 @@ function openModal(name) {
     if (!records.length) {
         modalBody.innerHTML = "<p>Brak danych</p>";
     } else {
-        let html = '<table><tr><th>Serial</th><th>Type</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
+        let html = '<table><tr><th>Serial</th><th>Type</th><th>Status</th><th>OC</th><th>COMMENT</th></tr>';
         records.forEach(r => {
             html += `<tr><td>${r.serial || '--'}</td><td>${r.type || '--'}</td><td>${r.status || '--'}</td><td>${r.ocAfterRepair || '--'}</td><td>${r.comment || '--'}</td></tr>`;
         });
-        html += '</table>';
-        modalBody.innerHTML = html;
+        modalBody.innerHTML = html + '</table>';
     }
     modal.classList.add('show');
 }
@@ -557,15 +504,10 @@ function displayCombinedStats(filtered) {
         stats[n].total++; gTotal++;
     });
     const tbody = document.querySelector('#combined-table tbody');
-    if(!tbody) return;
     tbody.innerHTML = "";
     for (let name in stats) {
         const row = document.createElement('tr');
-        const tdN = document.createElement('td'); tdN.textContent = name; tdN.onclick = () => openModal(name); row.appendChild(tdN);
-        ["NDF","OK","WAITING","SCRAP TTL","SCRAP PNLA"].forEach(k => {
-            const td = document.createElement('td'); td.textContent = stats[name][k] || 0; row.appendChild(td);
-        });
-        const tdT = document.createElement('td'); tdT.textContent = stats[name].total; tdT.className = "sum-col"; row.appendChild(tdT);
+        row.innerHTML = `<td onclick="openModal('${name}')">${name}</td><td>${stats[name].NDF}</td><td>${stats[name].OK}</td><td>${stats[name].WAITING}</td><td>${stats[name]['SCRAP TTL']}</td><td>${stats[name]['SCRAP PNLA']}</td><td class="sum-col">${stats[name].total}</td>`;
         tbody.appendChild(row);
     }
     const tr = document.createElement('tr'); tr.className = "total-row";
@@ -584,89 +526,41 @@ function displayDiagonalStats(filtered) {
     });
     const tbody = document.querySelector('#diag-table tbody');
     const thead = document.querySelector('#diag-table thead');
-    if(!tbody || !thead) return;
-
-    const allDiagonals = new Set();
-    Object.values(diagStats).forEach(obj => Object.keys(obj).forEach(k => allDiagonals.add(Number(k))));
-    const allDiags = Array.from(allDiagonals).filter(n => !isNaN(n)).sort((a,b) => a - b);
-    thead.innerHTML = `<tr><th>NAME</th>${allDiags.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
+    const allDiagonals = [...new Set(Object.values(diagStats).flatMap(o => Object.keys(o)))].map(Number).sort((a,b)=>a-b);
+    thead.innerHTML = `<tr><th>NAME</th>${allDiagonals.map(d => `<th>${d}</th>`).join('')}<th class="sum-col">SUMA</th></tr>`;
     tbody.innerHTML = '';
     Object.entries(diagStats).forEach(([name, diags]) => {
         const row = document.createElement('tr');
-        const tdN = document.createElement('td'); tdN.textContent = name; row.appendChild(tdN);
-        let sum = 0;
-        allDiags.forEach(d => {
-            const val = diags[d] || 0; sum += val;
-            const td = document.createElement('td'); td.textContent = val; row.appendChild(td);
-        });
-        const tdS = document.createElement('td'); tdS.textContent = sum; tdS.className = 'sum-col'; row.appendChild(tdS);
+        row.innerHTML = `<td>${name}</td>` + allDiagonals.map(d => `<td>${diags[d]||0}</td>`).join('') + `<td class="sum-col">${Object.values(diags).reduce((a,b)=>a+b,0)}</td>`;
         tbody.appendChild(row);
     });
 }
 
-const searchInput = document.getElementById('search');
-if(searchInput) {
-    searchInput.addEventListener('keypress', async e => {
-        if (e.key === 'Enter') {
-            const serial = e.target.value.trim();
-            const output = document.getElementById('search-result');
-            if (!serial || !output) return;
-            output.innerHTML = "<p style='color:lightblue'>Szukam...</p>";
-            try {
-                const matches = combinedDataCache.filter(r => (r.serial || '').trim() === serial);
-                if (matches.length) {
-                    matches.sort((a, b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
-                    let rowsHtml = matches.map((d, idx) => {
-                        const isLatest = idx === 0 ? 'class="latest-record"' : '';
-                        return `<tr ${isLatest}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`;
-                    }).join('');
-                    output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;">Info:</div> 
-                    <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
-                    <tbody>${rowsHtml}</tbody></table>`;
-                } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
-            } catch (err) { output.innerHTML = "<p style='color:red'>Błąd</p>"; }
-        }
-    });
-}
+document.getElementById('search').onkeypress = async e => {
+    if (e.key === 'Enter') {
+        const serial = e.target.value.trim();
+        const output = document.getElementById('search-result');
+        const matches = combinedDataCache.filter(r => (r.serial || '').trim() === serial).sort((a,b) => (parseDatePart(b.date)||0) - (parseDatePart(a.date)||0));
+        if (matches.length) {
+            output.innerHTML = `<table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
+            <tbody>${matches.map((d, i) => `<tr ${i===0?'class="latest-record"':''}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`).join('')}</tbody></table>`;
+        } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
+    }
+};
 
 async function updateStats() {
-    const success = await fetchAndCacheData();
-    if (combinedDataCache.length === 0) return;
-
-    const lastDate = getLastDate(combinedDataCache);
-    let lastDateStr = lastDate ? lastDate.toISOString().split('T')[0] : "";
-    const dInfo = document.getElementById('date-info');
-    if(dInfo) dInfo.textContent = `DATE: ${lastDateStr || '--'}`;
-    
-    const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === lastDateStr);
-    displayCombinedStats(filtered);
-    displayDiagonalStats(filtered);
-}
-
-const ovBtn = document.getElementById('overview-toggle');
-const ovBlock = document.getElementById('overview-block');
-if(ovBtn && ovBlock) {
-    ovBtn.onclick = () => ovBlock.style.display = (ovBlock.style.display === 'none') ? 'block' : 'none';
-}
-
-const diBtn = document.getElementById('diag-toggle');
-const diBlock = document.getElementById('diag-block');
-if(diBtn && diBlock) {
-    diBtn.onclick = () => diBlock.style.display = (diBlock.style.display === 'none') ? 'block' : 'none';
-}
-
-window.addEventListener('keydown', (e) => {
-    if (e.altKey) {
-        if (e.key === '1') {
-            e.preventDefault();
-            if (ovBtn) ovBtn.click();
-        }
-        if (e.key === '2') {
-            e.preventDefault();
-            if (diBtn) diBtn.click();
-        }
+    if (await fetchAndCacheData()) {
+        const lastDate = getLastDate(combinedDataCache);
+        const lastDateStr = lastDate.toISOString().split('T')[0];
+        document.getElementById('date-info').textContent = `DATE: ${lastDateStr}`;
+        const filtered = combinedDataCache.filter(r => (r.date || '').split(' ')[0] === lastDateStr);
+        displayCombinedStats(filtered);
+        displayDiagonalStats(filtered);
     }
-});
+}
+
+document.getElementById('overview-toggle').onclick = () => { const b = document.getElementById('overview-block'); b.style.display = b.style.display==='none'?'block':'none' };
+document.getElementById('diag-toggle').onclick = () => { const b = document.getElementById('diag-block'); b.style.display = b.style.display==='none'?'block':'none' };
 
 updateStats();
 setInterval(updateStats, 60000);
