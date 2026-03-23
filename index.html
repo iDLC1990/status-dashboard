@@ -540,12 +540,43 @@ function displayDiagonalStats(filtered) {
 }
 
  
+// --- ИСПРАВЛЕННЫЙ БЛОК ПОИСКА С КОЛОНКОЙ G ---
 document.getElementById('search').onkeypress = async e => {
     if (e.key === 'Enter') {
-        const inputVal = e.target.value.trim();
-        const snList = inputVal.split(/[\s,]+/).filter(s => s !== "");
+        const serial = e.target.value.trim();
         const output = document.getElementById('search-result');
-        runSearchLogic(snList, output);
+        
+        // Ищем совпадения в кэше
+        const matches = combinedDataCache.filter(r => (r.serial || '').trim() === serial)
+            .sort((a,b) => (parseDatePart(b.date)||0) - (parseDatePart(a.date)||0));
+            
+        if (matches.length) {
+            // Формируем таблицу: Data, Status, Naprawiacz (F), Finalna (G), Info (K)
+            output.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Status</th>
+                            <th>NAPRAWIACZ</th>
+                            <th style="color: #0ff;">FINALNA (G)</th>
+                            <th>INFO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${matches.map((d, i) => `
+                            <tr ${i === 0 ? 'class="latest-record"' : ''}>
+                                <td>${d.date}</td>
+                                <td>${d.status}</td>
+                                <td>${d.name}</td>
+                                <td style="font-weight:bold;">${d.nameG || '--'}</td> 
+                                <td>${d.comment}</td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        } else { 
+            output.innerHTML = "<p style='color:yellow; text-align:center;'>Brak info в базе данных!</p>"; 
+        }
     }
 };
 
