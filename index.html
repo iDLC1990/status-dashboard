@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>LCDR LIVE DATA 2026</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
+
 <meta name="theme-color" content="#008080">
 
 <style>
@@ -525,12 +523,7 @@ document.getElementById('diag-toggle').onclick = () => { const b = document.getE
 startApp();
 setInterval(fetchAndCacheData, 60000);
 
-// PWA Service Worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration failed:', err));
-    });
-}
+
 </script>
 </body>
 </html>
