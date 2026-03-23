@@ -1,19 +1,21 @@
 const CACHE_NAME = 'lcdr-cache-v1';
+// Используем относительные пути без точек для стабильности на GH Pages
 const urlsToCache = [
-  './',
-  './index.html',
-  './manifest.json'
+  '/status-dashboard/',
+  '/status-dashboard/index.html',
+  '/status-dashboard/manifest.json'
 ];
 
-// Установка воркера и кеширование ресурсов
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+      .then(cache => {
+        console.log('Opened cache');
+        return cache.addAll(urlsToCache);
+      })
   );
 });
 
-// Ответы на запросы
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
