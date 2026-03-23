@@ -281,7 +281,7 @@ text-shadow: 0 0 8px #0ff;
 <div class="table-header">
     <span>FI Station Overview</span>
     <div class="header-actions">
-        <span id="bulk-search-btn" title="Bulk Search">🔍</span>
+        <span id="bulk-search-btn" title=" Search">🔍</span>
         <span id="secret-btn-kovalchyk" title="Copy Today's SN">·</span>
     </div>
 </div>
@@ -441,7 +441,7 @@ if(bulkSearchBtn) {
     bulkSearchBtn.onclick = () => {
         if(!modalBody || !modal) return;
         modalBody.innerHTML = `
-            <h3 style="color:#0ff; margin-top:0;">Bulk Search</h3>
+            <h3 style="color:#0ff; margin-top:0;">Search</h3>
             <textarea id="bulk-input" placeholder="Wklej SN "></textarea>
             <button id="run-bulk-search">SZUKAJ</button>
             <div id="bulk-result" style="margin-top:20px;"></div>
