@@ -2,7 +2,6 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>LCDR LIVE DATA 2026</title>
 
@@ -217,17 +216,15 @@ margin-left: 10px;
 
 #secret-btn-kovalchyk {
 cursor: pointer;
-opacity: 0.3;
-font-size: 18px;
-transition: all 0.3s;
+opacity: 0.1;
+font-size: 14px;
+transition: opacity 0.3s;
 user-select: none;
 padding: 0 5px;
-color: #0ff;
 }
 
 #secret-btn-kovalchyk:hover {
 opacity: 1;
-text-shadow: 0 0 5px #0ff;
 }
 
 .sn-list-item {
@@ -280,13 +277,13 @@ font-size: 16px;
 </div>
 
 <div class="table-container">
-<button id="overview-toggle" class="toggle-btn">FI Overview</button>
+<button id="overview-toggle" class="toggle-btn">  </button>
 <div id="overview-block">
 <div class="table-header">
     <span>FI Station Overview</span>
     <div class="header-actions">
-        <span id="bulk-search-btn" title="Bulk Search">🔍</span>
-        <span id="secret-btn-kovalchyk" title="Copy Today's SN">·</span>
+        <span id="bulk-search-btn" title=" ">🔍</span>
+        <span id="secret-btn-kovalchyk">·</span>
     </div>
 </div>
 <table id="combined-table">
@@ -307,7 +304,7 @@ font-size: 16px;
 </div>
 
 <div class="table-container">
-<button id="diag-toggle" class="toggle-btn">FI Diagonals</button>
+<button id="diag-toggle" class="toggle-btn">    </button>
 <div id="diag-block">
 <div class="table-header">FI Station Diagonals</div>
 <table id="diag-table">
@@ -319,7 +316,6 @@ font-size: 16px;
 
 <div id="modal">
 <div id="modal-content">
-<button id="modal-close">Close</button>
 <button id="copy-btn">Copy SN</button>
 <div id="modal-body"></div>
 </div>
@@ -424,10 +420,12 @@ const modalClose = document.getElementById('modal-close');
 if(modalClose) modalClose.onclick = () => modal.classList.remove('show');
 if(modal) modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
 
-// Секретная кнопка Ковальчука
+// кнопка Юры
 const secretBtn = document.getElementById('secret-btn-kovalchyk');
 if(secretBtn) {
     secretBtn.onclick = () => {
+        if(!copyBtn || !modalBody || !modal) return;
+        copyBtn.style.display = "inline-block";
         const dInfoText = document.getElementById('date-info').textContent;
         const lastDateStr = dInfoText.includes(':') ? dInfoText.split(':')[1].trim() : "";
         
@@ -438,21 +436,28 @@ if(secretBtn) {
             r.type !== 'MNT'
         );
 
+        let html = `<h4 style="margin:0 0 10px 0; color:#008080;"> </h4>`;
         if (!records.length) {
-            console.log("No records for Yura today.");
-            return;
+            html += "<p> .</p>";
+            copyBtn.style.display = "none";
+        } else {
+            records.forEach(r => { html += `<div class="sn-list-item">${r.serial || '--'}</div>`; });
         }
+        modalBody.innerHTML = html;
+        modal.classList.add('show');
 
-        const textToCopy = records.map(r => r.serial).join('\n');
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            const oldSymbol = secretBtn.textContent;
-            secretBtn.textContent = "✓"; 
-            setTimeout(() => secretBtn.textContent = oldSymbol, 1500);
-        });
+        copyBtn.onclick = () => {
+            const textToCopy = records.map(r => r.serial).join('\n');
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const old = copyBtn.textContent;
+                copyBtn.textContent = "Copied!";
+                setTimeout(() => copyBtn.textContent = old, 1500);
+            });
+        };
     };
 }
 
-// Bulk Search логика
+//(логиув залупа)
 const bulkSearchBtn = document.getElementById('bulk-search-btn');
 if(bulkSearchBtn) {
     bulkSearchBtn.onclick = () => {
@@ -460,9 +465,9 @@ if(bulkSearchBtn) {
         if(copyBtn) copyBtn.style.display = "none";
 
         modalBody.innerHTML = `
-            <h3 style="color:#0ff; margin-top:0;">Bulk Search</h3>
-            <p style="font-size:14px; color:#aaa;">Wklej listę SN (jeden w linii):</p>
-            <textarea id="bulk-input" placeholder="SN1\nSN2..."></textarea>
+            <h3 style="color:#0ff; margin-top:0;"> </h3>
+            <p style="font-size:14px; color:#aaa;"> </p>
+            <textarea id="bulk-input" placeholder="SN1\nSN2\nSN3..."></textarea>
             <button id="run-bulk-search">SZUKAJ</button>
             <div id="bulk-result" style="margin-top:20px;"></div>
         `;
@@ -473,47 +478,22 @@ if(bulkSearchBtn) {
             const snList = text.split('\n').map(s => s.trim()).filter(s => s !== "");
             if(!snList.length) return;
 
-            const foundMatches = [];
-            const notFound = [];
-
+            const results = [];
             snList.forEach(sn => {
                 const matches = combinedDataCache.filter(r => (r.serial || '').trim() === sn);
                 if(matches.length) {
+                    
                     matches.sort((a,b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
-                    foundMatches.push(matches[0]);
+                    results.push(matches[0]);
                 } else {
-                    notFound.push({ serial: sn, date: '---', status: 'NOT FOUND', name: '---', comment: '' });
+                    results.push({ serial: sn, date: '---', status: 'NOT FOUND', name: '---', comment: ' ' });
                 }
             });
 
-            const workerCounts = {};
-            foundMatches.forEach(m => {
-                const wName = m.name || 'UNKNOWN';
-                workerCounts[wName] = (workerCounts[wName] || 0) + 1;
-            });
-
-            foundMatches.sort((a, b) => {
-                const countA = workerCounts[a.name || 'UNKNOWN'];
-                const countB = workerCounts[b.name || 'UNKNOWN'];
-                if (countB !== countA) return countB - countA; 
-                return (a.name || '').localeCompare(b.name || '');
-            });
-
-            const finalResults = [...foundMatches, ...notFound];
-
-            let resHtml = `<table><tr><th>Serial</th><th>Data</th><th>Status</th><th>Naprawiacz (Matches)</th><th>Info</th></tr>`;
-            finalResults.forEach(r => {
-                const isNotFound = r.status === 'NOT FOUND';
-                const style = isNotFound ? 'style="color:#ff5555"' : '';
-                const countLabel = !isNotFound ? ` (${workerCounts[r.name || 'UNKNOWN']})` : '';
-                
-                resHtml += `<tr ${style}>
-                    <td>${r.serial}</td>
-                    <td>${r.date}</td>
-                    <td>${r.status}</td>
-                    <td>${r.name}${countLabel}</td>
-                    <td>${r.comment}</td>
-                </tr>`;
+            let resHtml = `<table><tr><th>Serial</th><th>Data</th><th>Status</th><th>Naprawiacz</th><th>Info</th></tr>`;
+            results.forEach(r => {
+                const style = r.status === 'NOT FOUND' ? 'style="color:#ff5555"' : '';
+                resHtml += `<tr ${style}><td>${r.serial}</td><td>${r.date}</td><td>${r.status}</td><td>${r.name}</td><td>${r.comment}</td></tr>`;
             });
             resHtml += `</table>`;
             document.getElementById('bulk-result').innerHTML = resHtml;
@@ -529,7 +509,7 @@ function openModal(name) {
     const records = combinedDataCache.filter(r => r.name === name && (r.date || '').split(' ')[0] === lastDateStr);
 
     if (!records.length) {
-        modalBody.innerHTML = "<p>Brak danych</p>";
+        modalBody.innerHTML = "<p> </p>";
     } else {
         let html = '<table><tr><th>Serial</th><th>Type</th><th>Status</th><th>OC AFTER REPAIR</th><th>COMMENT</th></tr>';
         records.forEach(r => {
@@ -618,11 +598,11 @@ if(searchInput) {
                         const isLatest = idx === 0 ? 'class="latest-record"' : '';
                         return `<tr ${isLatest}><td>${d.date}</td><td>${d.status}</td><td>${d.name}</td><td>${d.nameG}</td><td>${d.comment}</td></tr>`;
                     }).join('');
-                    output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;">Info:</div> 
+                    output.innerHTML = `<div style="color:#0ff; font-size:12px; margin-bottom:5px;"> 
                     <table><thead><tr><th>Data</th><th>Status</th><th>NAPRAWIACZ</th><th>FINALNA</th><th>INFO</th></tr></thead>
                     <tbody>${rowsHtml}</tbody></table>`;
                 } else { output.innerHTML = "<p style='color:yellow'>Brak info!</p>"; }
-            } catch (err) { output.innerHTML = "<p style='color:red'>Błąd</p>"; }
+            } catch (err) { output.innerHTML = "<p style='color:red'> </p>"; }
         }
     });
 }
@@ -653,6 +633,7 @@ if(diBtn && diBlock) {
     diBtn.onclick = () => diBlock.style.display = (diBlock.style.display === 'none') ? 'block' : 'none';
 }
 
+// ГОРЯЧИЕ КЛАВИШИ (ALT+1 и ALT+2)
 window.addEventListener('keydown', (e) => {
     if (e.altKey) {
         if (e.key === '1') {
