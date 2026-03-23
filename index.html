@@ -645,9 +645,10 @@ document.addEventListener('keydown', (e) => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('SW Registered!', reg))
-      .catch(err => console.log('SW Error:', err));
+    // Используем путь относительно репозитория
+    navigator.serviceWorker.register('/status-dashboard/sw.js')
+      .then(reg => console.log('✅ SW запущен! Scope:', reg.scope))
+      .catch(err => console.error('❌ Ошибка SW:', err));
   });
 }
 </script>
