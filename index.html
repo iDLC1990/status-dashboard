@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>LCDR LIVE DATA 2026</title>
 
@@ -423,7 +424,7 @@ const modalClose = document.getElementById('modal-close');
 if(modalClose) modalClose.onclick = () => modal.classList.remove('show');
 if(modal) modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
 
-// 1. ПЕРЕДЕЛАННАЯ КНОПКА ЮРЫ (Прямое копирование)
+// Секретная кнопка Ковальчука
 const secretBtn = document.getElementById('secret-btn-kovalchyk');
 if(secretBtn) {
     secretBtn.onclick = () => {
@@ -445,13 +446,13 @@ if(secretBtn) {
         const textToCopy = records.map(r => r.serial).join('\n');
         navigator.clipboard.writeText(textToCopy).then(() => {
             const oldSymbol = secretBtn.textContent;
-            secretBtn.textContent = "✓"; // Визуальное подтверждение
+            secretBtn.textContent = "✓"; 
             setTimeout(() => secretBtn.textContent = oldSymbol, 1500);
         });
     };
 }
 
-// 2. ИЗМЕНЕННАЯ ЛОГИКА ПОИСКА (Сортировка по количеству совпадений у работника)
+// Bulk Search логика
 const bulkSearchBtn = document.getElementById('bulk-search-btn');
 if(bulkSearchBtn) {
     bulkSearchBtn.onclick = () => {
@@ -479,20 +480,18 @@ if(bulkSearchBtn) {
                 const matches = combinedDataCache.filter(r => (r.serial || '').trim() === sn);
                 if(matches.length) {
                     matches.sort((a,b) => (parseDatePart(b.date) || 0) - (parseDatePart(a.date) || 0));
-                    foundMatches.push(matches[0]); // Берем самую свежую запись
+                    foundMatches.push(matches[0]);
                 } else {
                     notFound.push({ serial: sn, date: '---', status: 'NOT FOUND', name: '---', comment: '' });
                 }
             });
 
-            // Считаем количество совпадений для каждого работника
             const workerCounts = {};
             foundMatches.forEach(m => {
                 const wName = m.name || 'UNKNOWN';
                 workerCounts[wName] = (workerCounts[wName] || 0) + 1;
             });
 
-            // Сортируем найденные результаты: сначала по популярности работника, потом по имени
             foundMatches.sort((a, b) => {
                 const countA = workerCounts[a.name || 'UNKNOWN'];
                 const countB = workerCounts[b.name || 'UNKNOWN'];
@@ -500,7 +499,6 @@ if(bulkSearchBtn) {
                 return (a.name || '').localeCompare(b.name || '');
             });
 
-            // Соединяем найденные и ненайденные (ненайденные в конце)
             const finalResults = [...foundMatches, ...notFound];
 
             let resHtml = `<table><tr><th>Serial</th><th>Data</th><th>Status</th><th>Naprawiacz (Matches)</th><th>Info</th></tr>`;
